@@ -1,7 +1,7 @@
 /**
  * Движок визуальной новеллы - Многопользовательский режим
- * ver. 3.0.0
- * Система поочерёдной игры с передачей хода через коды
+ * ver. 3.2
+ * Поддержка объектной структуры сцен
  */
 
 // Константы состояний игры
@@ -19,7 +19,7 @@ var gameState = {
     state: GAME_STATE.MENU,
     currentPlayer: 1,
     currentScene: 'start',
-    currentStep: 0,
+    currentNodeId: null,
     isTyping: false,
     typingComplete: false,
     variables: {},
@@ -34,21 +34,11 @@ var gameState = {
     }
 };
 
-// Кэш ассетов
-var assetCache = {
-    backgrounds: {},
-    characters: {},
-    audio: {}
-};
-
 // Элементы DOM
 var elements = {};
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
-    // Данные игры (из data.js)
-    var GAME_DATA = GAME_DATA;
-    
     initElements();
     initEventListeners();
     loadSettings();
@@ -103,12 +93,12 @@ function initEventListeners() {
 
     // Выбор роли
     var roleButtons = document.querySelectorAll('.role-select-btn');
-    roleButtons.forEach(function(btn) {
-        btn.addEventListener('click', function() {
+    for (var i = 0; i < roleButtons.length; i++) {
+        roleButtons[i].addEventListener('click', function() {
             var role = parseInt(this.getAttribute('data-role'));
             startNewGame(role);
         });
-    });
+    }
 
     // Игровой экран
     elements.dialogBox.addEventListener('click', handleDialogClick);
@@ -174,9 +164,9 @@ function showScreen(screenId) {
 
 function hideAllScreens() {
     var screens = document.querySelectorAll('.screen');
-    screens.forEach(function(screen) {
-        screen.classList.add('hidden');
-    });
+    for (var i = 0; i < screens.length; i++) {
+        screens[i].classList.add('hidden');
+    }
     document.getElementById('settings-menu').classList.add('hidden');
     document.getElementById('pause-menu').classList.add('hidden');
     document.getElementById('log-panel').classList.add('hidden');
@@ -224,7 +214,7 @@ function startNewGame(playerRole) {
     gameState.state = GAME_STATE.PLAYING;
     gameState.currentPlayer = playerRole;
     gameState.currentScene = 'start';
-    gameState.currentStep = 0;
+    gameState.currentNodeId = 'role_intro';
     gameState.variables = {};
     gameState.history = [];
     gameState.storyLog = [];
@@ -232,26 +222,32 @@ function startNewGame(playerRole) {
     gameState.choiceCount = 0;
 
     showScreen('screen-gameplay');
-    elements.controlPanel.classList.add('visible');
-    elements.turnIndicator.classList.add('visible');
+    if (elements.controlPanel) {
+        elements.controlPanel.classList.add('visible');
+    }
+    if (elements.turnIndicator) {
+        elements.turnIndicator.classList.add('visible');
+    }
 
     updateTurnIndicator();
     addToLog('system', 'Начало новой игры. Игрок ' + playerRole + ' начинает.');
 
-    playScene('start');
+    playScene('start', 'role_intro');
 }
 
 /**
  * Обновление индикатора хода
  */
 function updateTurnIndicator() {
-    elements.currentPlayerSpan.textContent = 'Игрок ' + gameState.currentPlayer;
+    if (elements.currentPlayerSpan) {
+        elements.currentPlayerSpan.textContent = 'Игрок ' + gameState.currentPlayer;
+    }
 }
 
 /**
  * Воспроизведение сцены
  */
-function playScene(sceneId) {
+function playScene(sceneId, startNodeId) {
     var scene = GAME_DATA.scenes[sceneId];
     if (!scene) {
         console.error('Сцена не найдена: ' + sceneId);
@@ -260,105 +256,165 @@ function playScene(sceneId) {
     }
 
     gameState.currentScene = sceneId;
-    gameState.currentStep = 0;
+    
+    // Если указан начальный узел, используем его
+    if (startNodeId) {
+        gameState.currentNodeId = startNodeId;
+    } else if (!gameState.currentNodeId) {
+        // Иначе берём первый узел
+        var nodeIds = Object.keys(scene.nodes);
+        if (nodeIds.length > 0) {
+            gameState.currentNodeId = nodeIds[0];
+        } else {
+            console.error('В сцене нет узлов: ' + sceneId);
+            return;
+        }
+    }
 
-    executeStep(sceneId, 0);
+    executeNode(sceneId, gameState.currentNodeId);
 }
 
 /**
- * Выполнение шага сцены
+ * Выполнение узла сцены
  */
-function executeStep(sceneId, stepIndex) {
+function executeNode(sceneId, nodeId) {
     var scene = GAME_DATA.scenes[sceneId];
-    if (!scene || stepIndex >= scene.length) {
+    if (!scene || !scene.nodes || !scene.nodes[nodeId]) {
+        console.error('Узел не найден: ' + sceneId + '.' + nodeId);
         return;
     }
 
-    var step = scene[stepIndex];
+    var node = scene.nodes[nodeId];
+    gameState.currentNodeId = nodeId;
 
-    switch (step.type) {
-        case 'bg':
-            changeBackground(step.src);
-            nextStep();
-            break;
+    // Обработка фонового изображения
+    if (node.location && elements.backgroundImage) {
+        var loc = GAME_DATA.locations[node.location];
+        if (loc && loc.image) {
+            elements.backgroundImage.src = loc.image;
+        }
+    }
 
-        case 'show':
-            showCharacter(step.char, step.pos, step.emotion);
-            nextStep();
-            break;
+    // Проверка на особые типы узлов
+    
+    // Конец хода
+    if (node.endTurn) {
+        gameState.turnCount++;
+        addToLog('system', 'Ход игрока ' + gameState.currentPlayer + ' завершён.');
+        var nextPlayer = node.nextPlayer || (gameState.currentPlayer === 1 ? 2 : 1);
+        generateTurnCode(nextPlayer, gameState.currentScene);
+        return;
+    }
 
-        case 'hide':
-            hideCharacter(step.pos);
-            nextStep();
-            break;
+    // Ввод кода
+    if (node.isCodeInput) {
+        showCodeInput();
+        return;
+    }
 
-        case 'say':
-            showDialog(step.name, step.text);
-            break;
+    // Вывод кода
+    if (node.isCodeOutput) {
+        generateTurnCode(node.nextPlayer || 2, gameState.currentScene);
+        return;
+    }
 
-        case 'choice':
-            showChoices(step.options);
-            break;
+    // Точка ожидания
+    if (node.isWaitingPoint) {
+        // Просто показываем текст
+        showDialog(node.speaker || '', formatText(node.text, gameState.variables));
+        return;
+    }
 
-        case 'jump':
-            playScene(step.to);
-            break;
-
-        case 'play':
-            playAudio(step.src, step.loop !== false);
-            nextStep();
-            break;
-
-        case 'stop':
-            stopAudio();
-            nextStep();
-            break;
-
-        case 'set':
-            setVariable(step.name, step.operator, step.value);
-            nextStep();
-            break;
-
-        case 'add':
-            addToVariable(step.name, step.value);
-            nextStep();
-            break;
-
-        case 'subtract':
-            subtractFromVariable(step.name, step.value);
-            nextStep();
-            break;
-
-        case 'roll':
-            rollDice(step.name, step.min || 1, step.max || 6, step.text);
-            break;
-
-        case 'if':
-            if (checkCondition(step.condition)) {
-                playScene(step.to);
-            } else if (step.else) {
-                playScene(step.else);
+    // Автопереход
+    if (node.autoAdvance) {
+        showDialog(node.speaker || '', formatText(node.text, gameState.variables));
+        setTimeout(function() {
+            if (node.autoAdvanceDelay) {
+                setTimeout(nextStep, node.autoAdvanceDelay);
             } else {
                 nextStep();
             }
-            break;
+        }, 100);
+        return;
+    }
 
-        case 'wait':
-            setTimeout(nextStep, step.duration || 1000);
-            break;
+    // Обычный диалог с выбором
+    if (node.choices && node.choices.length > 0) {
+        showDialog(node.speaker || '', formatText(node.text, gameState.variables));
+        showChoices(node.choices);
+        return;
+    }
 
-        case 'ending':
-            showEnding(step.title, step.text);
-            break;
+    // Простой диалог без выбора
+    if (node.text) {
+        showDialog(node.speaker || '', formatText(node.text, gameState.variables));
+        return;
+    }
 
-        case 'endTurn':
-            gameState.turnCount++;
-            addToLog('system', 'Ход игрока ' + gameState.currentPlayer + ' завершён.');
-            generateTurnCode(step.nextPlayer, step.nextScene);
-            break;
+    // Конец игры
+    if (node.isEnding) {
+        showEnding(node.title || 'Конец', formatText(node.text, gameState.variables));
+        return;
+    }
 
-        default:
-            nextStep();
+    // Действия
+    if (node.action) {
+        executeAction(node.action);
+    }
+
+    // Переход к следующему узлу
+    nextStep();
+}
+
+/**
+ * Выполнение действия
+ */
+function executeAction(action) {
+    if (action.setPlayer) {
+        gameState.currentPlayer = action.setPlayer;
+        updateTurnIndicator();
+    }
+
+    if (action.setVar) {
+        for (var key in action.setVar) {
+            if (action.setVar.hasOwnProperty(key)) {
+                var val = action.setVar[key];
+                // Проверяем, содержит ли значение оператор
+                if (typeof val === 'string' && (val.indexOf('+=') === 0 || val.indexOf('-=') === 0 || 
+                    val.indexOf('*=') === 0 || val.indexOf('/=') === 0)) {
+                    var op = val.substring(0, 2);
+                    var num = parseFloat(val.substring(2));
+                    var current = gameState.variables[key] || 0;
+                    if (op === '+=') gameState.variables[key] = current + num;
+                    else if (op === '-=') gameState.variables[key] = current - num;
+                    else if (op === '*=') gameState.variables[key] = current * num;
+                    else if (op === '/=') gameState.variables[key] = current / num;
+                } else {
+                    gameState.variables[key] = val;
+                }
+            }
+        }
+    }
+
+    if (action.add) {
+        for (var key in action.add) {
+            if (action.add.hasOwnProperty(key)) {
+                gameState.variables[key] = (gameState.variables[key] || 0) + action.add[key];
+            }
+        }
+    }
+
+    if (action.subtract) {
+        for (var key in action.subtract) {
+            if (action.subtract.hasOwnProperty(key)) {
+                gameState.variables[key] = (gameState.variables[key] || 0) - action.subtract[key];
+            }
+        }
+    }
+
+    if (action.resetGame) {
+        resetGame();
+        quitToMenu();
     }
 }
 
@@ -366,11 +422,20 @@ function executeStep(sceneId, stepIndex) {
  * Переход к следующему шагу
  */
 function nextStep() {
-    gameState.currentStep++;
-    var scene = gameState.currentScene;
-    if (!GAME_DATA.scenes[scene]) return;
-    if (gameState.currentStep >= GAME_DATA.scenes[scene].length) return;
-    executeStep(scene, gameState.currentStep);
+    var scene = GAME_DATA.scenes[gameState.currentScene];
+    if (!scene || !scene.nodes) return;
+
+    var nodeIds = Object.keys(scene.nodes);
+    var currentIndex = nodeIds.indexOf(gameState.currentNodeId);
+
+    if (currentIndex === -1 || currentIndex >= nodeIds.length - 1) {
+        // Конец сцены
+        console.log('Конец сцены: ' + gameState.currentScene);
+        return;
+    }
+
+    var nextNodeId = nodeIds[currentIndex + 1];
+    executeNode(gameState.currentScene, nextNodeId);
 }
 
 /**
@@ -415,19 +480,30 @@ function showDialog(name, text) {
     gameState.isTyping = true;
     gameState.typingComplete = false;
 
-    elements.speakerName.textContent = name || '';
-    elements.dialogText.textContent = '';
-    elements.dialogText.classList.add('text-typing');
-    elements.nextIndicator.style.display = 'none';
+    if (elements.speakerName) {
+        elements.speakerName.textContent = name || '';
+    }
+    if (elements.dialogText) {
+        elements.dialogText.textContent = '';
+    }
+    if (elements.dialogText) {
+        elements.dialogText.classList.add('text-typing');
+    }
+    if (elements.nextIndicator) {
+        elements.nextIndicator.style.display = 'none';
+    }
 
     addToLog('dialog', { name: name, text: text });
 
     var speed = Math.max(10, 101 - gameState.settings.textSpeed);
     var charIndex = 0;
+    var dialogText = text;
 
     function typeChar() {
-        if (charIndex < text.length) {
-            elements.dialogText.textContent += text.charAt(charIndex);
+        if (charIndex < dialogText.length) {
+            if (elements.dialogText) {
+                elements.dialogText.textContent += dialogText.charAt(charIndex);
+            }
             charIndex++;
             setTimeout(typeChar, speed);
         } else {
@@ -445,243 +521,67 @@ function completeTyping() {
     if (!gameState.isTyping) return;
 
     var scene = GAME_DATA.scenes[gameState.currentScene];
-    var step = scene && scene[gameState.currentStep];
-
-    if (step && step.type === 'say') {
-        elements.dialogText.textContent = step.text;
+    if (scene && scene.nodes && scene.nodes[gameState.currentNodeId]) {
+        var node = scene.nodes[gameState.currentNodeId];
+        if (elements.dialogText && node.text) {
+            elements.dialogText.textContent = formatText(node.text, gameState.variables);
+        }
     }
 
     gameState.isTyping = false;
     gameState.typingComplete = true;
-    elements.dialogText.classList.remove('text-typing');
-    elements.nextIndicator.style.display = 'block';
+    if (elements.dialogText) {
+        elements.dialogText.classList.remove('text-typing');
+    }
+    if (elements.nextIndicator) {
+        elements.nextIndicator.style.display = 'block';
+    }
 }
 
 /**
  * Показать варианты выбора
  */
 function showChoices(options) {
+    if (!elements.choiceContainer || !elements.choiceMenu) return;
+
     elements.choiceContainer.innerHTML = '';
     elements.choiceMenu.classList.remove('hidden');
 
-    options.forEach(function(option) {
-        if (option.condition && !checkCondition(option.condition)) {
-            return;
-        }
+    for (var i = 0; i < options.length; i++) {
+        var option = options[i];
 
         var btn = document.createElement('button');
         btn.className = 'choice-btn';
         btn.textContent = option.text;
-        btn.addEventListener('click', function() {
-            gameState.choiceCount++;
-            gameState.history.push({
-                player: gameState.currentPlayer,
-                text: option.text,
-                scene: option.jump
-            });
-            addToLog('choice', { player: gameState.currentPlayer, text: option.text });
+        btn.addEventListener('click', (function(opt, idx) {
+            return function() {
+                gameState.choiceCount++;
+                gameState.history.push({
+                    player: gameState.currentPlayer,
+                    text: opt.text,
+                    scene: opt.nextNode
+                });
+                addToLog('choice', { player: gameState.currentPlayer, text: opt.text });
 
-            hideChoices();
-            playScene(option.jump);
-        });
+                hideChoices();
+                playScene(gameState.currentScene, opt.nextNode);
+            };
+        })(option, i));
 
         elements.choiceContainer.appendChild(btn);
-    });
+    }
 }
 
 /**
  * Скрыть меню выбора
  */
 function hideChoices() {
-    elements.choiceMenu.classList.add('hidden');
-    elements.choiceContainer.innerHTML = '';
-}
-
-/**
- * Проверка условия
- */
-function checkCondition(condition) {
-    try {
-        var match = condition.match(/(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+)/);
-        if (match) {
-            var variable = match[1], operator = match[2], value = match[3];
-            var varValue = gameState.variables[variable];
-            var numValue = parseFloat(value);
-
-            switch (operator) {
-                case '==': return varValue == numValue;
-                case '!=': return varValue != numValue;
-                case '>': return varValue > numValue;
-                case '<': return varValue < numValue;
-                case '>=': return varValue >= numValue;
-                case '<=': return varValue <= numValue;
-            }
-        }
-        if (condition.charAt(0) === '!') {
-            return !gameState.variables[condition.slice(1)];
-        }
-        return !!gameState.variables[condition];
-    } catch (e) {
-        return false;
+    if (elements.choiceMenu) {
+        elements.choiceMenu.classList.add('hidden');
     }
-}
-
-/**
- * Установка переменной
- */
-function setVariable(name, operator, value) {
-    var currentValue = gameState.variables[name] || 0;
-
-    switch (operator) {
-        case '=':
-            gameState.variables[name] = value;
-            break;
-        case '+=':
-            gameState.variables[name] = currentValue + value;
-            break;
-        case '-=':
-            gameState.variables[name] = currentValue - value;
-            break;
-        case '*=':
-            gameState.variables[name] = currentValue * value;
-            break;
-        case '/=':
-            gameState.variables[name] = currentValue / value;
-            break;
-        case '++':
-            gameState.variables[name] = currentValue + 1;
-            break;
-        case '--':
-            gameState.variables[name] = currentValue - 1;
-            break;
-        default:
-            gameState.variables[name] = value;
+    if (elements.choiceContainer) {
+        elements.choiceContainer.innerHTML = '';
     }
-
-    addToLog('system', 'Переменная ' + name + ' = ' + gameState.variables[name]);
-}
-
-/**
- * Добавить значение к переменной
- */
-function addToVariable(name, value) {
-    var currentValue = gameState.variables[name] || 0;
-    gameState.variables[name] = currentValue + value;
-    addToLog('system', name + ' + ' + value + ' = ' + gameState.variables[name]);
-}
-
-/**
- * Вычесть значение из переменной
- */
-function subtractFromVariable(name, value) {
-    var currentValue = gameState.variables[name] || 0;
-    gameState.variables[name] = currentValue - value;
-    addToLog('system', name + ' - ' + value + ' = ' + gameState.variables[name]);
-}
-
-/**
- * Бросить кубик (случайное число)
- */
-function rollDice(variableName, min, max, customText) {
-    var result = Math.floor(Math.random() * (max - min + 1)) + min;
-
-    if (variableName) {
-        gameState.variables[variableName] = result;
-        addToLog('system', 'Кубик брошен: ' + variableName + ' = ' + result + ' (' + min + '-' + max + ')');
-    }
-
-    var text = customText || 'Кубик показывает: ' + result;
-
-    if (GAME_DATA.scenes && GAME_DATA.scenes.start && GAME_DATA.scenes.start.nodes) {
-        showDialog('Система', text + ' (Результат сохранён в переменную ' + variableName + ')');
-    }
-}
-
-/**
- * Смена фона
- */
-function changeBackground(src) {
-    if (GAME_DATA.assets && GAME_DATA.assets.backgrounds && GAME_DATA.assets.backgrounds[src]) {
-        elements.backgroundImage.src = GAME_DATA.assets.backgrounds[src];
-    } else {
-        elements.backgroundImage.src = src;
-    }
-    elements.backgroundImage.onload = function() {
-        elements.backgroundImage.classList.add('loaded');
-    };
-}
-
-/**
- * Показать персонажа
- */
-function showCharacter(charId, position, emotion) {
-    var key = emotion ? charId + '_' + emotion : charId;
-    var src = charId;
-
-    if (GAME_DATA.assets && GAME_DATA.assets.characters) {
-        if (GAME_DATA.assets.characters[key]) {
-            src = GAME_DATA.assets.characters[key];
-        } else if (GAME_DATA.assets.characters[charId]) {
-            src = GAME_DATA.assets.characters[charId];
-        }
-    }
-
-    var slot = getCharacterSlot(position);
-    if (!slot) return;
-
-    var img = document.createElement('img');
-    img.src = src;
-    img.alt = charId;
-    img.style.display = 'none';
-    img.onload = function() { img.style.display = 'block'; };
-
-    slot.innerHTML = '';
-    slot.appendChild(img);
-    slot.classList.add('visible');
-}
-
-/**
- * Скрыть персонажа
- */
-function hideCharacter(position) {
-    var slot = getCharacterSlot(position);
-    if (!slot) return;
-    slot.classList.remove('visible');
-    setTimeout(function() { slot.innerHTML = ''; }, 400);
-}
-
-/**
- * Получить слот персонажа
- */
-function getCharacterSlot(position) {
-    switch (position) {
-        case 'left': return elements.characterLeft;
-        case 'center': return elements.characterCenter;
-        case 'right': return elements.characterRight;
-        default: return null;
-    }
-}
-
-/**
- * Воспроизведение аудио
- */
-function playAudio(key, loop) {
-    var src = key;
-    if (GAME_DATA.assets && GAME_DATA.assets.audio && GAME_DATA.assets.audio[key]) {
-        src = GAME_DATA.assets.audio[key];
-    }
-    elements.bgmPlayer.src = src;
-    elements.bgmPlayer.loop = loop !== false;
-    elements.bgmPlayer.volume = gameState.settings.musicVolume / 100;
-    elements.bgmPlayer.play().catch(function() {});
-}
-
-/**
- * Остановка аудио
- */
-function stopAudio() {
-    elements.bgmPlayer.pause();
-    elements.bgmPlayer.currentTime = 0;
 }
 
 // ============ СИСТЕМА КОДОВ ============
@@ -700,6 +600,7 @@ function generateTurnCode(nextPlayer, nextScene) {
         timestamp: Date.now(),
         player: nextPlayerNum,
         scene: nextSceneId,
+        nodeId: gameState.currentNodeId,
         variables: gameState.variables,
         turnCount: gameState.turnCount,
         choiceCount: gameState.choiceCount,
@@ -715,8 +616,12 @@ function generateTurnCode(nextPlayer, nextScene) {
         readableCode += base64Code.substring(i, Math.min(i + 50, base64Code.length)) + '\n';
     }
 
-    document.getElementById('next-player-num').textContent = nextPlayerNum;
-    elements.generatedCodeTextarea.value = readableCode.trim();
+    if (document.getElementById('next-player-num')) {
+        document.getElementById('next-player-num').textContent = nextPlayerNum;
+    }
+    if (elements.generatedCodeTextarea) {
+        elements.generatedCodeTextarea.value = readableCode.trim();
+    }
     showScreen('screen-code-output');
 
     console.log('Код сгенерирован для игрока ' + nextPlayerNum);
@@ -766,6 +671,7 @@ function submitCode() {
 
         gameState.currentPlayer = data.player;
         gameState.currentScene = data.scene;
+        gameState.currentNodeId = data.nodeId;
         gameState.variables = data.variables || {};
         gameState.turnCount = data.turnCount || 0;
         gameState.choiceCount = data.choiceCount || 0;
@@ -773,13 +679,17 @@ function submitCode() {
         gameState.storyLog = data.log || [];
 
         showScreen('screen-gameplay');
-        elements.controlPanel.classList.add('visible');
-        elements.turnIndicator.classList.add('visible');
+        if (elements.controlPanel) {
+            elements.controlPanel.classList.add('visible');
+        }
+        if (elements.turnIndicator) {
+            elements.turnIndicator.classList.add('visible');
+        }
         updateTurnIndicator();
 
         addToLog('system', 'Игрок ' + data.player + ' принял ход.');
 
-        playScene(data.scene);
+        playScene(data.scene, data.nodeId);
 
         showNotification('Ход принят! Продолжаем историю.');
 
@@ -793,8 +703,10 @@ function submitCode() {
  * Показать ошибку ввода кода
  */
 function showCodeError(message) {
-    elements.codeError.textContent = message;
-    elements.codeError.classList.remove('hidden');
+    if (elements.codeError) {
+        elements.codeError.textContent = message;
+        elements.codeError.classList.remove('hidden');
+    }
 }
 
 // ============ СИСТЕМА ЛОГОВ ============
@@ -824,7 +736,8 @@ function updateLogDisplay() {
     text.push('Выборов: ' + gameState.choiceCount);
     text.push('');
 
-    gameState.storyLog.forEach(function(entry) {
+    for (var i = 0; i < gameState.storyLog.length; i++) {
+        var entry = gameState.storyLog[i];
         if (entry.type === 'dialog') {
             if (entry.data.name) {
                 text.push('[' + entry.time + '] ' + entry.data.name + ': ' + entry.data.text);
@@ -836,14 +749,20 @@ function updateLogDisplay() {
         } else if (entry.type === 'system') {
             text.push('[' + entry.time + '] [СИСТЕМА] ' + entry.data);
         }
-    });
+    }
 
     text.push('');
     text.push('=== КОНЕЦ ===');
 
-    elements.logText.value = text.join('\n');
-    elements.logTurnCount.textContent = 'Ходов: ' + gameState.turnCount;
-    elements.logPlayerCount.textContent = 'Выборов: ' + gameState.choiceCount;
+    if (elements.logText) {
+        elements.logText.value = text.join('\n');
+    }
+    if (elements.logTurnCount) {
+        elements.logTurnCount.textContent = 'Ходов: ' + gameState.turnCount;
+    }
+    if (elements.logPlayerCount) {
+        elements.logPlayerCount.textContent = 'Выборов: ' + gameState.choiceCount;
+    }
 }
 
 /**
@@ -869,7 +788,7 @@ function saveGame() {
         state: gameState.state,
         currentPlayer: gameState.currentPlayer,
         currentScene: gameState.currentScene,
-        currentStep: gameState.currentStep,
+        currentNodeId: gameState.currentNodeId,
         variables: gameState.variables,
         history: gameState.history,
         storyLog: gameState.storyLog,
@@ -903,7 +822,7 @@ function loadGame() {
         gameState.state = saveData.state || GAME_STATE.PLAYING;
         gameState.currentPlayer = saveData.currentPlayer;
         gameState.currentScene = saveData.currentScene;
-        gameState.currentStep = saveData.currentStep || 0;
+        gameState.currentNodeId = saveData.currentNodeId;
         gameState.variables = saveData.variables || {};
         gameState.history = saveData.history || [];
         gameState.storyLog = saveData.storyLog || [];
@@ -911,11 +830,15 @@ function loadGame() {
         gameState.choiceCount = saveData.choiceCount || 0;
 
         showScreen('screen-gameplay');
-        elements.controlPanel.classList.add('visible');
-        elements.turnIndicator.classList.add('visible');
+        if (elements.controlPanel) {
+            elements.controlPanel.classList.add('visible');
+        }
+        if (elements.turnIndicator) {
+            elements.turnIndicator.classList.add('visible');
+        }
         updateTurnIndicator();
 
-        playScene(gameState.currentScene);
+        playScene(gameState.currentScene, gameState.currentNodeId);
 
         showNotification('Игра загружена!');
         return true;
@@ -958,8 +881,12 @@ function quitToMenu() {
     gameState.state = GAME_STATE.MENU;
     stopAudio();
     showScreen('screen-menu');
-    elements.controlPanel.classList.remove('visible');
-    elements.turnIndicator.classList.remove('visible');
+    if (elements.controlPanel) {
+        elements.controlPanel.classList.remove('visible');
+    }
+    if (elements.turnIndicator) {
+        elements.turnIndicator.classList.remove('visible');
+    }
     hidePauseMenu();
 }
 
@@ -986,10 +913,18 @@ function hideScreen(screenId) {
 function showEnding(title, text) {
     gameState.state = GAME_STATE.ENDING;
 
-    elements.endingTitle.textContent = title || 'Конец';
-    elements.endingText.textContent = text || '';
-    elements.statTurns.textContent = gameState.turnCount;
-    elements.statChoices.textContent = gameState.choiceCount;
+    if (elements.endingTitle) {
+        elements.endingTitle.textContent = title || 'Конец';
+    }
+    if (elements.endingText) {
+        elements.endingText.textContent = text || '';
+    }
+    if (elements.statTurns) {
+        elements.statTurns.textContent = gameState.turnCount;
+    }
+    if (elements.statChoices) {
+        elements.statChoices.textContent = gameState.choiceCount;
+    }
 
     showScreen('screen-ending');
 }
@@ -1003,31 +938,52 @@ function loadSettings() {
     var saved = localStorage.getItem('vn_settings');
     if (saved) {
         var settings = JSON.parse(saved);
-        gameState.settings = Object.assign(gameState.settings, settings);
+        for (var key in settings) {
+            if (settings.hasOwnProperty(key) && gameState.settings.hasOwnProperty(key)) {
+                gameState.settings[key] = settings[key];
+            }
+        }
     }
 
-    document.getElementById('music-volume').value = gameState.settings.musicVolume;
-    document.getElementById('sfx-volume').value = gameState.settings.sfxVolume;
-    document.getElementById('text-speed').value = gameState.settings.textSpeed;
-    document.getElementById('music-volume-value').textContent = gameState.settings.musicVolume + '%';
-    document.getElementById('sfx-volume-value').textContent = gameState.settings.sfxVolume + '%';
-    document.getElementById('text-speed-value').textContent = gameState.settings.textSpeed;
+    var musicVol = document.getElementById('music-volume');
+    var sfxVol = document.getElementById('sfx-volume');
+    var textSpd = document.getElementById('text-speed');
 
-    elements.bgmPlayer.volume = gameState.settings.musicVolume / 100;
-    elements.sfxPlayer.volume = gameState.settings.sfxVolume / 100;
+    if (musicVol) musicVol.value = gameState.settings.musicVolume;
+    if (sfxVol) sfxVol.value = gameState.settings.sfxVolume;
+    if (textSpd) textSpd.value = gameState.settings.textSpeed;
+
+    var musicVal = document.getElementById('music-volume-value');
+    var sfxVal = document.getElementById('sfx-volume-value');
+    var textVal = document.getElementById('text-speed-value');
+
+    if (musicVal) musicVal.textContent = gameState.settings.musicVolume + '%';
+    if (sfxVal) sfxVal.textContent = gameState.settings.sfxVolume + '%';
+    if (textVal) textVal.textContent = gameState.settings.textSpeed;
+
+    if (elements.bgmPlayer) {
+        elements.bgmPlayer.volume = gameState.settings.musicVolume / 100;
+    }
+    if (elements.sfxPlayer) {
+        elements.sfxPlayer.volume = gameState.settings.sfxVolume / 100;
+    }
 }
 
 function updateMusicVolume(e) {
     gameState.settings.musicVolume = parseInt(e.target.value);
     document.getElementById('music-volume-value').textContent = e.target.value + '%';
-    elements.bgmPlayer.volume = e.target.value / 100;
+    if (elements.bgmPlayer) {
+        elements.bgmPlayer.volume = e.target.value / 100;
+    }
     saveSettings();
 }
 
 function updateSfxVolume(e) {
     gameState.settings.sfxVolume = parseInt(e.target.value);
     document.getElementById('sfx-volume-value').textContent = e.target.value + '%';
-    elements.sfxPlayer.volume = e.target.value / 100;
+    if (elements.sfxPlayer) {
+        elements.sfxPlayer.volume = e.target.value / 100;
+    }
     saveSettings();
 }
 
@@ -1060,12 +1016,30 @@ function showNotification(message) {
     }, 2000);
 }
 
+// ============ АУДИО ============
+
+function playAudio(src, loop) {
+    if (elements.bgmPlayer) {
+        elements.bgmPlayer.src = src;
+        elements.bgmPlayer.loop = loop !== false;
+        elements.bgmPlayer.volume = gameState.settings.musicVolume / 100;
+        elements.bgmPlayer.play().catch(function() {});
+    }
+}
+
+function stopAudio() {
+    if (elements.bgmPlayer) {
+        elements.bgmPlayer.pause();
+        elements.bgmPlayer.currentTime = 0;
+    }
+}
+
 // ============ ПОЛНОЭКРАННЫЙ РЕЖИМ ============
 
 function toggleFullscreen() {
     if (document.fullscreenElement) {
         document.exitFullscreen();
-    } else {
+    } else if (elements.gameContainer) {
         elements.gameContainer.requestFullscreen();
     }
 }
@@ -1075,13 +1049,13 @@ function toggleFullscreen() {
 window.gameDebug = {
     getState: function() { return gameState; },
     getData: function() { return GAME_DATA; },
-    jump: function(scene) {
+    jump: function(scene, node) {
         gameState.currentScene = scene;
-        playScene(scene);
+        playScene(scene, node);
     },
     setVar: function(name, value) {
         gameState.variables[name] = value;
     },
-    getLog: function() { return elements.logText.value; },
+    getLog: function() { return elements.logText ? elements.logText.value : ''; },
     generateCode: function() { generateTurnCode(); }
 };
