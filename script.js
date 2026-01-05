@@ -44,11 +44,11 @@ var assetCache = {
 // Элементы DOM
 var elements = {};
 
-// Данные игры (из data.js)
-var gameData = GAME_DATA;
-
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
+    // Данные игры (из data.js)
+    var GAME_DATA = GAME_DATA;
+    
     initElements();
     initEventListeners();
     loadSettings();
@@ -252,7 +252,7 @@ function updateTurnIndicator() {
  * Воспроизведение сцены
  */
 function playScene(sceneId) {
-    var scene = gameData.scenes[sceneId];
+    var scene = GAME_DATA.scenes[sceneId];
     if (!scene) {
         console.error('Сцена не найдена: ' + sceneId);
         showNotification('Ошибка: сцена не найдена');
@@ -269,7 +269,7 @@ function playScene(sceneId) {
  * Выполнение шага сцены
  */
 function executeStep(sceneId, stepIndex) {
-    var scene = gameData.scenes[sceneId];
+    var scene = GAME_DATA.scenes[sceneId];
     if (!scene || stepIndex >= scene.length) {
         return;
     }
@@ -368,8 +368,8 @@ function executeStep(sceneId, stepIndex) {
 function nextStep() {
     gameState.currentStep++;
     var scene = gameState.currentScene;
-    if (!gameData.scenes[scene]) return;
-    if (gameState.currentStep >= gameData.scenes[scene].length) return;
+    if (!GAME_DATA.scenes[scene]) return;
+    if (gameState.currentStep >= GAME_DATA.scenes[scene].length) return;
     executeStep(scene, gameState.currentStep);
 }
 
@@ -444,7 +444,7 @@ function showDialog(name, text) {
 function completeTyping() {
     if (!gameState.isTyping) return;
 
-    var scene = gameData.scenes[gameState.currentScene];
+    var scene = GAME_DATA.scenes[gameState.currentScene];
     var step = scene && scene[gameState.currentStep];
 
     if (step && step.type === 'say') {
@@ -592,7 +592,7 @@ function rollDice(variableName, min, max, customText) {
 
     var text = customText || 'Кубик показывает: ' + result;
 
-    if (gameData.scenes && gameData.scenes.start && gameData.scenes.start.nodes) {
+    if (GAME_DATA.scenes && GAME_DATA.scenes.start && GAME_DATA.scenes.start.nodes) {
         showDialog('Система', text + ' (Результат сохранён в переменную ' + variableName + ')');
     }
 }
@@ -601,8 +601,8 @@ function rollDice(variableName, min, max, customText) {
  * Смена фона
  */
 function changeBackground(src) {
-    if (gameData.assets && gameData.assets.backgrounds && gameData.assets.backgrounds[src]) {
-        elements.backgroundImage.src = gameData.assets.backgrounds[src];
+    if (GAME_DATA.assets && GAME_DATA.assets.backgrounds && GAME_DATA.assets.backgrounds[src]) {
+        elements.backgroundImage.src = GAME_DATA.assets.backgrounds[src];
     } else {
         elements.backgroundImage.src = src;
     }
@@ -618,11 +618,11 @@ function showCharacter(charId, position, emotion) {
     var key = emotion ? charId + '_' + emotion : charId;
     var src = charId;
 
-    if (gameData.assets && gameData.assets.characters) {
-        if (gameData.assets.characters[key]) {
-            src = gameData.assets.characters[key];
-        } else if (gameData.assets.characters[charId]) {
-            src = gameData.assets.characters[charId];
+    if (GAME_DATA.assets && GAME_DATA.assets.characters) {
+        if (GAME_DATA.assets.characters[key]) {
+            src = GAME_DATA.assets.characters[key];
+        } else if (GAME_DATA.assets.characters[charId]) {
+            src = GAME_DATA.assets.characters[charId];
         }
     }
 
@@ -667,8 +667,8 @@ function getCharacterSlot(position) {
  */
 function playAudio(key, loop) {
     var src = key;
-    if (gameData.assets && gameData.assets.audio && gameData.assets.audio[key]) {
-        src = gameData.assets.audio[key];
+    if (GAME_DATA.assets && GAME_DATA.assets.audio && GAME_DATA.assets.audio[key]) {
+        src = GAME_DATA.assets.audio[key];
     }
     elements.bgmPlayer.src = src;
     elements.bgmPlayer.loop = loop !== false;
@@ -1074,7 +1074,7 @@ function toggleFullscreen() {
 
 window.gameDebug = {
     getState: function() { return gameState; },
-    getData: function() { return gameData; },
+    getData: function() { return GAME_DATA; },
     jump: function(scene) {
         gameState.currentScene = scene;
         playScene(scene);
