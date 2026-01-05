@@ -128,7 +128,182 @@ body {
     pointer-events: auto;
 }
 
-/* === Диалоговое окно === */
+/* === Экраны === */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 25;
+}
+
+/* === ГЛАВНОЕ МЕНЮ === */
+#screen-menu {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+}
+
+.menu-content {
+    text-align: center;
+    padding: 40px;
+}
+
+.menu-content h1 {
+    font-size: 42px;
+    font-weight: 700;
+    color: #f0c040;
+    margin-bottom: 15px;
+    text-shadow: 0 4px 20px rgba(240, 192, 64, 0.4);
+    letter-spacing: 2px;
+}
+
+.menu-content p {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 40px;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 280px;
+    margin: 0 auto;
+}
+
+.menu-btn-large {
+    padding: 20px 30px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+    background: linear-gradient(135deg, #f0c040 0%, #d4a020 100%);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.menu-btn-large:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(240, 192, 64, 0.4);
+}
+
+.menu-buttons button:not(.menu-btn-large) {
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #ffffff;
+    background: rgba(60, 60, 80, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.menu-buttons button:not(.menu-btn-large):hover {
+    background: rgba(80, 80, 100, 0.8);
+    border-color: #f0c040;
+    transform: scale(1.02);
+}
+
+/* === ВЫБОР РОЛИ === */
+#screen-role-select {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+}
+
+.role-content {
+    text-align: center;
+    padding: 40px;
+}
+
+.role-content h2 {
+    font-size: 32px;
+    color: #ffffff;
+    margin-bottom: 15px;
+}
+
+.role-description {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 40px;
+}
+
+.role-buttons {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.role-card {
+    background: linear-gradient(180deg, rgba(30, 30, 45, 0.9) 0%, rgba(20, 20, 35, 0.95) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 30px;
+    width: 250px;
+    transition: all 0.3s ease;
+}
+
+.role-card:hover {
+    border-color: #f0c040;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(240, 192, 64, 0.2);
+}
+
+.role-card h3 {
+    font-size: 24px;
+    color: #f0c040;
+    margin: 15px 0 10px;
+}
+
+.role-card p {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.role-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #f0c040 0%, #d4a020 100%);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 auto;
+}
+
+.role-select-btn {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    background: rgba(60, 60, 80, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.role-select-btn:hover {
+    background: linear-gradient(135deg, #f0c040 0%, #d4a020 100%);
+    color: #1a1a1a;
+}
+
+/* === ИГРОВОЙ ЭКРАН === */
+#screen-gameplay {
+    z-index: 20;
+}
+
+/* Диалоговое окно */
 #dialog-box {
     position: absolute;
     bottom: 20px;
@@ -143,16 +318,11 @@ body {
     padding: 20px 25px;
     box-shadow: 0 -5px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
 #dialog-box:hover {
     transform: translateX(-50%) translateY(-2px);
-    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-#dialog-box.active {
-    background: linear-gradient(180deg, rgba(25, 25, 35, 0.98) 0%, rgba(15, 15, 25, 0.99) 100%);
 }
 
 #speaker-name {
@@ -161,14 +331,12 @@ body {
     color: #f0c040;
     margin-bottom: 10px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-    letter-spacing: 0.5px;
 }
 
 #dialog-text {
     font-size: 18px;
     line-height: 1.6;
     color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 #next-indicator {
@@ -181,18 +349,12 @@ body {
 }
 
 @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
-        transform: translateY(0);
-    }
-    40% {
-        transform: translateY(-8px);
-    }
-    60% {
-        transform: translateY(-4px);
-    }
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-8px); }
+    60% { transform: translateY(-4px); }
 }
 
-/* === Меню выбора === */
+/* Меню выбора */
 #choice-menu {
     position: absolute;
     top: 0;
@@ -203,7 +365,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 20;
+    z-index: 30;
     backdrop-filter: blur(5px);
 }
 
@@ -232,14 +394,217 @@ body {
     background: linear-gradient(135deg, rgba(80, 80, 100, 0.95) 0%, rgba(60, 60, 80, 0.98) 100%);
     border-color: #f0c040;
     transform: scale(1.02);
-    box-shadow: 0 5px 20px rgba(240, 192, 64, 0.3);
 }
 
-.choice-btn:active {
-    transform: scale(0.98);
+/* Панель управления */
+#control-panel {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    display: flex;
+    gap: 8px;
+    z-index: 25;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-/* === Меню настроек === */
+#game-container:hover #control-panel,
+#control-panel.visible {
+    opacity: 1;
+}
+
+#control-panel button {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#control-panel button:hover {
+    background: rgba(240, 192, 64, 0.3);
+    border-color: #f0c040;
+    transform: scale(1.1);
+}
+
+/* Индикатор хода */
+#turn-indicator {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    padding: 8px 15px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    z-index: 15;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#screen-gameplay:hover #turn-indicator,
+#turn-indicator.visible {
+    opacity: 1;
+}
+
+#current-player {
+    color: #f0c040;
+    font-weight: 600;
+}
+
+/* === ЭКРАН ВЫВОДА КОДА === */
+#screen-code-output {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+}
+
+.code-output-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 600px;
+    width: 90%;
+}
+
+.code-output-icon,
+.code-input-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.code-output-content h2,
+.code-input-content h2 {
+    font-size: 32px;
+    color: #f0c040;
+    margin-bottom: 20px;
+}
+
+.code-output-message,
+.code-input-message {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+#next-player-num {
+    color: #f0c040;
+    font-weight: 700;
+}
+
+.code-display,
+.code-input-field {
+    margin-bottom: 25px;
+}
+
+.code-display textarea,
+.code-input-field textarea {
+    width: 100%;
+    min-height: 150px;
+    padding: 20px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #f0c040;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(240, 192, 64, 0.3);
+    border-radius: 12px;
+    resize: vertical;
+}
+
+.code-display textarea {
+    word-break: break-all;
+}
+
+.code-hint {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 20px;
+}
+
+/* === ЭКРАН ВВОДА КОДА === */
+#screen-code-input {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+}
+
+.code-input-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 600px;
+    width: 90%;
+}
+
+.code-input-field textarea {
+    min-height: 120px;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.error-message {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(200, 50, 50, 0.2);
+    border: 1px solid rgba(200, 50, 50, 0.5);
+    border-radius: 8px;
+    color: #ff6b6b;
+    font-size: 14px;
+}
+
+/* === Кнопки === */
+.code-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-success {
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #f0c040 0%, #d4a020 100%);
+    color: #1a1a1a;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(240, 192, 64, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(60, 60, 80, 0.8);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(80, 80, 100, 0.9);
+    border-color: #f0c040;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    color: #ffffff;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
+}
+
+/* === МЕНЮ НАСТРОЕК === */
 #settings-menu {
     position: absolute;
     top: 0;
@@ -250,7 +615,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 30;
+    z-index: 50;
     backdrop-filter: blur(8px);
 }
 
@@ -269,7 +634,6 @@ body {
     font-size: 28px;
     margin-bottom: 30px;
     color: #f0c040;
-    letter-spacing: 2px;
 }
 
 .setting-item {
@@ -299,12 +663,6 @@ body {
     border-radius: 50%;
     background: #f0c040;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease;
-}
-
-.setting-item input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.1);
 }
 
 .setting-item span {
@@ -341,82 +699,186 @@ body {
     border-color: #f0c040;
 }
 
-#close-settings {
-    width: 100%;
-    padding: 15px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #ffffff;
-    background: linear-gradient(135deg, #c9302c 0%, #a02622 100%);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 20px;
-    transition: all 0.3s ease;
-}
-
-#close-settings:hover {
-    background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%);
-    transform: translateY(-2px);
-}
-
-/* === Главное меню === */
-#main-menu {
+/* === МЕНЮ ПАУЗЫ === */
+#pause-menu {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+    background: rgba(0, 0, 0, 0.85);
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 25;
+    z-index: 45;
+    backdrop-filter: blur(5px);
 }
 
-#main-menu h1 {
-    font-size: 48px;
-    font-weight: 700;
+.pause-content {
+    background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(20, 20, 35, 0.99) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    min-width: 300px;
+}
+
+.pause-content h3 {
+    font-size: 28px;
     color: #f0c040;
-    margin-bottom: 15px;
-    text-shadow: 0 4px 20px rgba(240, 192, 64, 0.4);
-    letter-spacing: 3px;
+    margin-bottom: 30px;
 }
 
-#main-menu p {
-    font-size: 18px;
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 50px;
-}
-
-.menu-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    width: 250px;
-}
-
-.menu-buttons button {
-    padding: 18px 30px;
-    font-size: 18px;
-    font-weight: 600;
+.pause-content button {
+    display: block;
+    width: 100%;
+    padding: 15px 20px;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 500;
     color: #ffffff;
-    background: rgba(60, 60, 80, 0.6);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
+    background: rgba(60, 60, 80, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
-.menu-buttons button:hover {
-    background: rgba(80, 80, 100, 0.8);
+.pause-content button:hover {
+    background: rgba(80, 80, 100, 0.9);
     border-color: #f0c040;
-    transform: scale(1.05);
-    box-shadow: 0 5px 25px rgba(240, 192, 64, 0.3);
 }
 
-/* === Экран загрузки === */
+/* === ПАНЕЛЬ ЛОГОВ === */
+#log-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 55;
+    backdrop-filter: blur(5px);
+}
+
+.log-content {
+    background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(20, 20, 35, 0.99) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.log-content h3 {
+    text-align: center;
+    color: #f0c040;
+    margin-bottom: 15px;
+    font-size: 22px;
+}
+
+.log-info {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.log-info span {
+    color: #f0c040;
+}
+
+#log-text {
+    width: 100%;
+    flex: 1;
+    min-height: 300px;
+    max-height: 400px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+    color: #ffffff;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: none;
+    margin-bottom: 20px;
+}
+
+/* === ЭКРАН КОНЦОВКИ === */
+#screen-ending {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+}
+
+.ending-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 700px;
+    width: 90%;
+}
+
+.ending-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.ending-content h2 {
+    font-size: 36px;
+    color: #f0c040;
+    margin-bottom: 25px;
+    text-shadow: 0 3px 15px rgba(240, 192, 64, 0.4);
+}
+
+.ending-content p {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.8;
+    margin-bottom: 30px;
+}
+
+.ending-stats {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    margin-bottom: 40px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #f0c040;
+}
+
+.ending-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* === ЭКРАН ЗАГРУЗКИ === */
 #loading-screen {
     position: absolute;
     top: 0;
@@ -441,123 +903,13 @@ body {
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
 #loading-screen p {
     margin-top: 20px;
     font-size: 16px;
     color: rgba(255, 255, 255, 0.7);
-}
-
-/* === Панель управления === */
-#control-panel {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    display: flex;
-    gap: 8px;
-    z-index: 15;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-#game-container:hover #control-panel,
-#control-panel.visible {
-    opacity: 1;
-}
-
-#control-panel button {
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-#control-panel button:hover {
-    background: rgba(240, 192, 64, 0.3);
-    border-color: #f0c040;
-    transform: scale(1.1);
-}
-
-/* === Экран концовки === */
-#ending-screen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(180deg, rgba(20, 20, 35, 0.95) 0%, rgba(10, 10, 20, 0.98) 100%);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 35;
-    padding: 40px;
-    text-align: center;
-}
-
-#ending-screen h2 {
-    font-size: 36px;
-    color: #f0c040;
-    margin-bottom: 20px;
-    text-shadow: 0 3px 15px rgba(240, 192, 64, 0.4);
-}
-
-#ending-screen p {
-    font-size: 18px;
-    color: rgba(255, 255, 255, 0.9);
-    max-width: 600px;
-    line-height: 1.8;
-    margin-bottom: 40px;
-}
-
-#ending-screen button {
-    padding: 15px 40px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #ffffff;
-    background: linear-gradient(135deg, #f0c040 0%, #d4a020 100%);
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    margin: 0 10px;
-    transition: all 0.3s ease;
-}
-
-#ending-screen button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 25px rgba(240, 192, 64, 0.4);
-}
-
-/* === Вспомогательные классы === */
-.hidden {
-    display: none !important;
-}
-
-.fade-in {
-    animation: fadeIn 0.5s ease forwards;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-.text-typing {
-    overflow: hidden;
-    white-space: pre-wrap;
 }
 
 /* === Уведомления === */
@@ -581,7 +933,17 @@ body {
     transform: translateX(-50%) translateY(0);
 }
 
-/* === Стили для мобильных устройств === */
+/* === Вспомогательные классы === */
+.hidden {
+    display: none !important;
+}
+
+.text-typing {
+    overflow: hidden;
+    white-space: pre-wrap;
+}
+
+/* === Мобильные устройства === */
 @media (max-width: 768px) {
     #dialog-box {
         bottom: 10px;
@@ -601,8 +963,23 @@ body {
         height: 75%;
     }
 
-    #main-menu h1 {
-        font-size: 32px;
+    .menu-content h1 {
+        font-size: 28px;
+    }
+
+    .role-card {
+        width: 100%;
+        max-width: 280px;
+    }
+
+    .code-output-content h2,
+    .code-input-content h2 {
+        font-size: 24px;
+    }
+
+    .ending-stats {
+        flex-direction: column;
+        gap: 20px;
     }
 
     #control-panel {
@@ -615,162 +992,10 @@ body {
         height: 35px;
         font-size: 16px;
     }
-}
 
-/* === ПАНЕЛЬ ИСТОРИИ === */
-#log-panel {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 50;
-    backdrop-filter: blur(5px);
+    #turn-indicator {
+        top: 10px;
+        left: 10px;
+        font-size: 12px;
+    }
 }
-
-.log-content {
-    background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(20, 20, 35, 0.99) 100%);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    border-radius: 16px;
-    padding: 30px;
-    max-width: 700px;
-    width: 90%;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-}
-
-.log-content h3 {
-    text-align: center;
-    color: #f0c040;
-    margin-bottom: 20px;
-    font-size: 22px;
-}
-
-#log-text {
-    width: 100%;
-    height: 400px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    padding: 15px;
-    color: #ffffff;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    resize: none;
-    margin-bottom: 20px;
-}
-
-.log-buttons {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-}
-
-.log-buttons button,
-.transfer-buttons button {
-    padding: 12px 25px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
-    background: rgba(60, 60, 80, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.log-buttons button:hover,
-.transfer-buttons button:hover {
-    background: rgba(80, 80, 100, 0.9);
-    border-color: #f0c040;
-}
-
-/* === ОКНО ПЕРЕДАЧИ ДАННЫХ === */
-#transfer-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 60;
-    backdrop-filter: blur(5px);
-}
-
-.transfer-content {
-    background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(20, 20, 35, 0.99) 100%);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    border-radius: 16px;
-    padding: 30px;
-    max-width: 600px;
-    width: 90%;
-}
-
-.transfer-content h3 {
-    text-align: center;
-    color: #f0c040;
-    margin-bottom: 15px;
-}
-
-.transfer-content p {
-    color: rgba(255, 255, 255, 0.8);
-    margin-bottom: 15px;
-    font-size: 14px;
-}
-
-#transfer-input {
-    width: 100%;
-    height: 100px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    padding: 15px;
-    color: #ffffff;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 12px;
-    margin-bottom: 20px;
-    resize: vertical;
-}
-
-#generated-code {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(240, 192, 64, 0.3);
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-#generated-code p {
-    color: #f0c040;
-    margin-bottom: 10px;
-}
-
-#generated-code textarea {
-    width: 100%;
-    height: 80px;
-    background: rgba(0, 0, 0, 0.5);
-    border: none;
-    border-radius: 4px;
-    padding: 10px;
-    color: #ffffff;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 11px;
-    resize: none;
-}
-
-.transfer-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
