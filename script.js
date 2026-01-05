@@ -287,6 +287,9 @@ function executeNode(sceneId, nodeId) {
     var node = scene.nodes[nodeId];
     gameState.currentNodeId = nodeId;
 
+    // Скрываем меню выбора перед показом нового узла
+    hideChoices();
+
     // Обработка фонового изображения
     if (node.location && elements.backgroundImage) {
         var loc = GAME_DATA.locations[node.location];
@@ -338,16 +341,16 @@ function executeNode(sceneId, nodeId) {
         return;
     }
 
-    // Обычный диалог с выбором
-    if (node.choices && node.choices.length > 0) {
+    // Простой диалог - без выбора
+    if (node.text && (!node.choices || node.choices.length === 0)) {
         showDialog(node.speaker || '', formatText(node.text, gameState.variables));
-        showChoices(node.choices);
         return;
     }
 
-    // Простой диалог без выбора
-    if (node.text) {
+    // Диалог с выбором
+    if (node.text && node.choices && node.choices.length > 0) {
         showDialog(node.speaker || '', formatText(node.text, gameState.variables));
+        showChoices(node.choices);
         return;
     }
 
@@ -444,9 +447,15 @@ function nextStep() {
 function handleDialogClick() {
     if (gameState.state !== GAME_STATE.PLAYING) return;
 
+    // Если меню выбора активно, игрок должен выбрать один из вариантов
+    if (elements.choiceMenu && !elements.choiceMenu.classList.contains('hidden')) {
+        return; // Игнорируем клик на диалог, пока не выбран вариант
+    }
+
     if (gameState.isTyping) {
         completeTyping();
     } else {
+        hideChoices();
         nextStep();
     }
 }
@@ -456,6 +465,11 @@ function handleDialogClick() {
  */
 function handleKeyDown(e) {
     if (gameState.state !== GAME_STATE.PLAYING) return;
+
+    // Если меню выбора активно, клавиши не обрабатываются для продвижения текста
+    if (elements.choiceMenu && !elements.choiceMenu.classList.contains('hidden')) {
+        return;
+    }
 
     switch (e.key) {
         case ' ':
