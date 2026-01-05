@@ -1,6 +1,6 @@
 /**
  * Движок визуальной новеллы
- * ver. 2.0.0 - Без предзагрузки ассетов
+ * ver. 2.0.1 - Исправленная версия
  */
 
 // Глобальное состояние игры
@@ -91,15 +91,15 @@ function setupEventListeners() {
     document.getElementById('music-volume').addEventListener('input', updateMusicVolume);
     document.getElementById('sfx-volume').addEventListener('input', updateSfxVolume);
     document.getElementById('text-speed').addEventListener('input', updateTextSpeed);
-    document.getElementById('save-game-btn').addEventListener('click', () => {
+    document.getElementById('save-game-btn').addEventListener('click', function() {
         saveGame();
         showNotification('Игра сохранена');
     });
-    document.getElementById('load-game-btn').addEventListener('click', () => {
+    document.getElementById('load-game-btn').addEventListener('click', function() {
         loadGame();
         closeSettings();
-        showNotificationгружена');
-('Игра за    });
+        showNotification('Игра загружена');
+    });
     document.getElementById('reset-game-btn').addEventListener('click', resetGame);
 
     // Кнопки концовки
@@ -169,7 +169,7 @@ function startGame() {
     gameState.history = [];
 
     // Небольшая задержка для визуального эффекта
-    setTimeout(() => {
+    setTimeout(function() {
         elements.loadingScreen.classList.add('hidden');
         elements.controlPanel.classList.add('visible');
         playScene('start');
@@ -193,9 +193,9 @@ function continueGame() {
 function playScene(sceneId) {
     console.log('Воспроизведение сцены:', sceneId);
     
-    const scene = gameData.scenes[sceneId];
+    var scene = gameData.scenes[sceneId];
     if (!scene) {
-        console.error(`Сцена "${sceneId}" не найдена!`);
+        console.error('Сцена "' + sceneId + '" не найдена!');
         console.log('Доступные сцены:', Object.keys(gameData.scenes));
         showNotification('Ошибка: сцена не найдена');
         return;
@@ -212,14 +212,14 @@ function playScene(sceneId) {
  * Выполнение шага сцены
  */
 function executeStep(sceneId, stepIndex) {
-    const scene = gameData.scenes[sceneId];
+    var scene = gameData.scenes[sceneId];
     if (!scene || stepIndex >= scene.length) {
-        console.log(`Сцена "${sceneId}" завершена`);
+        console.log('Сцена "' + sceneId + '" завершена');
         return;
     }
 
-    const step = scene[stepIndex];
-    console.log('Выполнение шага:', step.type, step);
+    var step = scene[stepIndex];
+    console.log('Выполнение шага:', step.type);
 
     switch (step.type) {
         case 'bg':
@@ -283,7 +283,7 @@ function executeStep(sceneId, stepIndex) {
             break;
 
         default:
-            console.warn(`Неизвестный тип шага: ${step.type}`);
+            console.warn('Неизвестный тип шага: ' + step.type);
             nextStep();
     }
 }
@@ -294,11 +294,11 @@ function executeStep(sceneId, stepIndex) {
 function nextStep() {
     gameState.currentStep++;
 
-    const scene = gameState.currentScene;
+    var scene = gameState.currentScene;
     if (!gameData.scenes[scene]) return;
 
     if (gameState.currentStep >= gameData.scenes[scene].length) {
-        console.log(`Сцена "${scene}" завершена`);
+        console.log('Сцена "' + scene + '" завершена');
         return;
     }
 
@@ -319,7 +319,7 @@ function changeBackground(src) {
         elements.backgroundImage.src = src;
     }
     
-    elements.backgroundImage.onload = () => {
+    elements.backgroundImage.onload = function() {
         elements.backgroundImage.classList.add('loaded');
     };
 }
@@ -330,8 +330,8 @@ function changeBackground(src) {
 function showCharacter(charId, position, emotion) {
     console.log('Показать персонажа:', charId, position, emotion);
     
-    const key = emotion ? `${charId}_${emotion}` : charId;
-    let src = charId; // По умолчанию используем как путь
+    var key = emotion ? charId + '_' + emotion : charId;
+    var src = charId; // По умолчанию используем как путь
 
     // Пробуем найти в ассетах
     if (gameData.assets && gameData.assets.characters) {
@@ -342,11 +342,20 @@ function showCharacter(charId, position, emotion) {
         }
     }
 
-    const slot = getCharacterSlot(position);
+    var slot = getCharacterSlot(position);
     if (!slot) return;
 
     // Создаём изображение персонажа
-    slot.innerHTML = `<img src="${src}" alt="${charId}" style="display:none;" onload="this.style.display='block'">`;
+    var img = document.createElement('img');
+    img.src = src;
+    img.alt = charId;
+    img.style.display = 'none';
+    img.onload = function() {
+        img.style.display = 'block';
+    };
+    
+    slot.innerHTML = '';
+    slot.appendChild(img);
     slot.classList.add('visible');
 }
 
@@ -354,11 +363,11 @@ function showCharacter(charId, position, emotion) {
  * Скрыть персонажа
  */
 function hideCharacter(position) {
-    const slot = getCharacterSlot(position);
+    var slot = getCharacterSlot(position);
     if (!slot) return;
 
     slot.classList.remove('visible');
-    setTimeout(() => {
+    setTimeout(function() {
         slot.innerHTML = '';
     }, 400);
 }
@@ -387,12 +396,12 @@ function showDialog(name, text) {
     elements.dialogText.classList.add('text-typing');
     elements.nextIndicator.style.display = 'none';
 
-    const speed = Math.max(10, 101 - gameState.settings.textSpeed);
-    let charIndex = 0;
+    var speed = Math.max(10, 101 - gameState.settings.textSpeed);
+    var charIndex = 0;
 
     function typeChar() {
         if (charIndex < text.length) {
-            elements.dialogText.textContent += text[charIndex];
+            elements.dialogText.textContent += text.charAt(charIndex);
             charIndex++;
             typingTimer = setTimeout(typeChar, speed);
         } else {
@@ -411,8 +420,8 @@ function completeTyping() {
 
     clearTimeout(typingTimer);
 
-    const scene = gameData.scenes[gameState.currentScene];
-    const step = scene && scene[gameState.currentStep];
+    var scene = gameData.scenes[gameState.currentScene];
+    var step = scene && scene[gameState.currentStep];
 
     if (step && step.type === 'say') {
         elements.dialogText.textContent = step.text;
@@ -431,15 +440,15 @@ function showChoices(options) {
     elements.choiceContainer.innerHTML = '';
     elements.choiceMenu.classList.remove('hidden');
 
-    options.forEach((option) => {
+    options.forEach(function(option) {
         if (option.condition && !checkCondition(option.condition)) {
             return;
         }
 
-        const btn = document.createElement('button');
+        var btn = document.createElement('button');
         btn.className = 'choice-btn';
         btn.textContent = option.text;
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', function() {
             if (option.text) {
                 gameState.history.push({
                     type: 'choice',
@@ -469,11 +478,13 @@ function hideChoices() {
  */
 function checkCondition(condition) {
     try {
-        const match = condition.match(/(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+)/);
+        var match = condition.match(/(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+)/);
         if (match) {
-            const [, variable, operator, value] = match;
-            const varValue = gameState.variables[variable];
-            const numValue = parseFloat(value);
+            var variable = match[1];
+            var operator = match[2];
+            var value = match[3];
+            var varValue = gameState.variables[variable];
+            var numValue = parseFloat(value);
 
             switch (operator) {
                 case '==': return varValue == numValue;
@@ -485,7 +496,7 @@ function checkCondition(condition) {
             }
         }
 
-        if (condition.startsWith('!')) {
+        if (condition.charAt(0) === '!') {
             return !gameState.variables[condition.slice(1)];
         }
 
@@ -507,7 +518,7 @@ function setVariable(name, value) {
  * Воспроизведение аудио
  */
 function playAudio(key, loop) {
-    let src = key;
+    var src = key;
 
     if (gameData.assets && gameData.assets.audio && gameData.assets.audio[key]) {
         src = gameData.assets.audio[key];
@@ -517,8 +528,8 @@ function playAudio(key, loop) {
     elements.bgmPlayer.loop = loop !== false;
     elements.bgmPlayer.volume = gameState.settings.musicVolume / 100;
     
-    elements.bgmPlayer.play().catch(err => {
-        console.log('Не удалось воспроизвести аудио:', src, err);
+    elements.bgmPlayer.play().catch(function(err) {
+        console.log('Не удалось воспроизвести аудио:', src);
     });
 }
 
@@ -543,10 +554,10 @@ function showEnding(title, text) {
  * Управление настройками
  */
 function loadSettings() {
-    const saved = localStorage.getItem('visualNovelSettings');
+    var saved = localStorage.getItem('visualNovelSettings');
     if (saved) {
-        const settings = JSON.parse(saved);
-        gameState.settings = { ...gameState.settings, ...settings };
+        var settings = JSON.parse(saved);
+        gameState.settings = Object.assign(gameState.settings, settings);
     }
 
     document.getElementById('music-volume').value = gameState.settings.musicVolume;
@@ -588,7 +599,7 @@ function saveSettings() {
  * Сохранение и загрузка игры
  */
 function saveGame() {
-    const saveData = {
+    var saveData = {
         scene: gameState.currentScene,
         step: gameState.currentStep,
         variables: gameState.variables,
@@ -600,13 +611,13 @@ function saveGame() {
 }
 
 function loadGame() {
-    const saved = localStorage.getItem('visualNovelSave');
+    var saved = localStorage.getItem('visualNovelSave');
     if (!saved) {
         showNotification('Нет сохранённой игры');
         return false;
     }
 
-    const saveData = JSON.parse(saved);
+    var saveData = JSON.parse(saved);
 
     gameState.currentScene = saveData.scene;
     gameState.currentStep = saveData.step;
@@ -696,7 +707,7 @@ function closeSettings() {
  */
 function toggleSkipMode() {
     gameState.skipMode = !gameState.skipMode;
-    const btn = document.getElementById('skip-btn');
+    var btn = document.getElementById('skip-btn');
     btn.style.background = gameState.skipMode ? 'rgba(240, 192, 64, 0.5)' : '';
     showNotification(gameState.skipMode ? 'Режим пропуска включён' : 'Режим пропуска выключен');
 }
@@ -716,7 +727,7 @@ function toggleFullscreen() {
  * Показать уведомление
  */
 function showNotification(message) {
-    let notification = document.getElementById('notification');
+    var notification = document.getElementById('notification');
 
     if (!notification) {
         notification = document.createElement('div');
@@ -727,7 +738,7 @@ function showNotification(message) {
     notification.textContent = message;
     notification.classList.add('show');
 
-    setTimeout(() => {
+    setTimeout(function() {
         notification.classList.remove('show');
     }, 2000);
 }
@@ -736,8 +747,8 @@ function showNotification(message) {
  * Проверка наличия сохранённой игры
  */
 function checkSaveData() {
-    const saved = localStorage.getItem('visualNovelSave');
-    const continueBtn = document.getElementById('continue-game-btn');
+    var saved = localStorage.getItem('visualNovelSave');
+    var continueBtn = document.getElementById('continue-game-btn');
 
     if (saved) {
         continueBtn.disabled = false;
@@ -753,17 +764,17 @@ document.addEventListener('DOMContentLoaded', initGame);
 
 // Глобальные функции для отладки
 window.gameDebug = {
-    getState: () => gameState,
-    getData: () => gameData,
-    jump: (scene, step) => {
+    getState: function() { return gameState; },
+    getData: function() { return gameData; },
+    jump: function(scene, step) {
         gameState.currentScene = scene;
         gameState.currentStep = step;
         playScene(scene);
     },
-    setVar: (name, value) => {
+    setVar: function(name, value) {
         gameState.variables[name] = value;
     },
-    clearSave: () => {
+    clearSave: function() {
         localStorage.removeItem('visualNovelSave');
         showNotification('Сохранение очищено');
     }
