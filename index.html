@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Визуальная Новелла</title>
+    <title>Визуальная Новелла - Многопользовательский режим</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -22,19 +22,106 @@
 
         <!-- UI слой -->
         <div id="ui-layer">
-            <!-- Диалоговое окно -->
-            <div id="dialog-box">
-                <div id="speaker-name"></div>
-                <div id="dialog-text"></div>
-                <div id="next-indicator">▼</div>
+            <!-- ===== ГЛАВНОЕ МЕНЮ ===== -->
+            <div id="screen-menu" class="screen">
+                <div class="menu-content">
+                    <h1>Моя Визуальная Новелла</h1>
+                    <p>Многопользовательский режим</p>
+                    <div class="menu-buttons">
+                        <button id="btn-new-game" class="menu-btn-large">Новая игра</button>
+                        <button id="btn-load-save">Продолжить</button>
+                        <button id="btn-enter-code">Ввести код хода</button>
+                        <button id="btn-settings">Настройки</button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Меню выбора -->
-            <div id="choice-menu" class="hidden">
-                <div id="choice-container"></div>
+            <!-- ===== ВЫБОР РОЛИ ===== -->
+            <div id="screen-role-select" class="screen hidden">
+                <div class="role-content">
+                    <h2>Выберите вашу роль</h2>
+                    <p class="role-description">Каждый игрок делает свой ход и передаёт код другому</p>
+                    <div class="role-buttons">
+                        <div class="role-card" id="role-card-1">
+                            <div class="role-icon">1</div>
+                            <h3>Игрок 1</h3>
+                            <p>Начинает историю и делает первый ход</p>
+                            <button class="role-select-btn" data-role="1">Выбрать</button>
+                        </div>
+                        <div class="role-card" id="role-card-2">
+                            <div class="role-icon">2</div>
+                            <h3>Игрок 2</h3>
+                            <p>Продолжит историю после получения кода</p>
+                            <button class="role-select-btn" data-role="2">Выбрать</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Меню настроек -->
+            <!-- ===== ИГРОВОЙ ЭКРАН ===== -->
+            <div id="screen-gameplay" class="screen hidden">
+                <!-- Диалоговое окно -->
+                <div id="dialog-box">
+                    <div id="speaker-name"></div>
+                    <div id="dialog-text"></div>
+                    <div id="next-indicator">▼</div>
+                </div>
+
+                <!-- Меню выбора -->
+                <div id="choice-menu" class="hidden">
+                    <div id="choice-container"></div>
+                </div>
+
+                <!-- Панель управления -->
+                <div id="control-panel">
+                    <button id="log-btn" title="История">📖</button>
+                    <button id="menu-btn" title="Меню">☰</button>
+                    <button id="save-btn" title="Сохранить">💾</button>
+                    <button id="settings-panel-btn" title="Настройки">⚙️</button>
+                    <button id="end-turn-btn" title="Завершить ход">🔄</button>
+                </div>
+
+                <!-- Индикатор хода -->
+                <div id="turn-indicator">
+                    Ход: <span id="current-player">Игрок 1</span>
+                </div>
+            </div>
+
+            <!-- ===== ЭКРАН ВЫВОДА КОДА ===== -->
+            <div id="screen-code-output" class="screen hidden">
+                <div class="code-output-content">
+                    <div class="code-output-icon">🔄</div>
+                    <h2>Ход завершён!</h2>
+                    <p class="code-output-message">Передайте этот код игроку <span id="next-player-num">2</span>:</p>
+                    <div class="code-display">
+                        <textarea id="generated-code" readonly></textarea>
+                    </div>
+                    <div class="code-buttons">
+                        <button id="btn-copy-code" class="btn-primary">📋 Копировать код</button>
+                        <button id="btn-confirm-transfer" class="btn-success">Я передал код</button>
+                    </div>
+                    <p class="code-hint">После передачи кода игра вернётся в меню</p>
+                </div>
+            </div>
+
+            <!-- ===== ЭКРАН ВВОДА КОДА ===== -->
+            <div id="screen-code-input" class="screen hidden">
+                <div class="code-input-content">
+                    <div class="code-input-icon">🔐</div>
+                    <h2>Введите код хода</h2>
+                    <p id="code-input-message">Получили код от партнёра? Введите его ниже:</p>
+                    <div class="code-input-field">
+                        <textarea id="input-code" placeholder="Вставьте код сюда..."></textarea>
+                    </div>
+                    <div class="code-buttons">
+                        <button id="btn-submit-code" class="btn-primary">Принять ход</button>
+                        <button id="btn-back-to-menu" class="btn-secondary">Назад</button>
+                    </div>
+                    <div id="code-error" class="error-message hidden"></div>
+                </div>
+            </div>
+
+            <!-- ===== МЕНЮ НАСТРОЕК ===== -->
             <div id="settings-menu" class="hidden">
                 <div class="settings-content">
                     <h3>Настройки</h3>
@@ -54,51 +141,76 @@
                         <span id="text-speed-value">30</span>
                     </div>
                     <div class="setting-buttons">
-                        <button id="save-game-btn">Сохранить</button>
-                        <button id="load-game-btn">Загрузить</button>
-                        <button id="reset-game-btn">Начать сначала</button>
+                        <button id="save-game-btn">💾 Сохранить игру</button>
+                        <button id="load-game-btn">📂 Загрузить</button>
+                        <button id="reset-game-btn">🔄 Начать сначала</button>
                     </div>
-                    <button id="close-settings">Закрыть</button>
+                    <button id="close-settings" class="btn-secondary">Закрыть</button>
                 </div>
             </div>
 
-            <!-- Главное меню -->
-            <div id="main-menu">
-                <h1>Моя Визуальная Новелла</h1>
-                <p>Интерактивная история</p>
-                <div class="menu-buttons">
-                    <button id="start-game-btn">Начать игру</button>
-                    <button id="continue-game-btn">Продолжить</button>
-                    <button id="settings-btn">Настройки</button>
+            <!-- ===== ПАУЗА/МЕНЮ В ИГРЕ ===== -->
+            <div id="pause-menu" class="hidden">
+                <div class="pause-content">
+                    <h3>Меню</h3>
+                    <button id="pause-save-btn">💾 Сохранить</button>
+                    <button id="pause-load-btn">📂 Загрузить</button>
+                    <button id="pause-log-btn">📖 История</button>
+                    <button id="pause-endturn-btn">🔄 Завершить ход</button>
+                    <button id="resume-game-btn">Продолжить</button>
+                    <button id="quit-game-btn">Выйти в меню</button>
                 </div>
             </div>
 
-            <!-- Экран загрузки -->
-            <div id="loading-screen">
+            <!-- ===== ПАНЕЛЬ ЛОГОВ ===== -->
+            <div id="log-panel" class="hidden">
+                <div class="log-content">
+                    <h3>История прохождения</h3>
+                    <div class="log-info">
+                        <span id="log-turn-count">Ходов: 0</span>
+                        <span id="log-player-count">Игроков: 1</span>
+                    </div>
+                    <textarea id="log-text" readonly></textarea>
+                    <div class="log-buttons">
+                        <button id="copy-log-btn" class="btn-primary">📋 Копировать</button>
+                        <button id="close-log-btn" class="btn-secondary">Закрыть</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ЭКРАН КОНЦОВКИ ===== -->
+            <div id="screen-ending" class="screen hidden">
+                <div class="ending-content">
+                    <div class="ending-icon">🏆</div>
+                    <h2 id="ending-title">Конец</h2>
+                    <p id="ending-text"></p>
+                    <div class="ending-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Ходов сделано:</span>
+                            <span id="stat-turns" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Выборов игроков:</span>
+                            <span id="stat-choices" class="stat-value">0</span>
+                        </div>
+                    </div>
+                    <div class="ending-buttons">
+                        <button id="view-log-btn" class="btn-primary">📖 Посмотреть историю</button>
+                        <button id="restart-btn" class="btn-secondary">Играть снова</button>
+                        <button id="back-to-menu-btn" class="btn-secondary">В меню</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ЭКРАН ЗАГРУЗКИ ===== -->
+            <div id="loading-screen" class="hidden">
                 <div class="loader"></div>
                 <p>Загрузка...</p>
-            </div>
-
-            <!-- Панель управления -->
-            <div id="control-panel">
-                <button id="menu-btn" title="Меню">☰</button>
-                <button id="save-btn" title="Сохранить">💾</button>
-                <button id="load-btn" title="Загрузить">📂</button>
-                <button id="settings-panel-btn" title="Настройки">⚙️</button>
-                <button id="skip-btn" title="Пропуск">⏩</button>
-            </div>
-
-            <!-- Экран концовки -->
-            <div id="ending-screen" class="hidden">
-                <h2 id="ending-title"></h2>
-                <p id="ending-text"></p>
-                <button id="restart-btn">Играть снова</button>
-                <button id="back-to-menu-btn">В меню</button>
             </div>
         </div>
     </div>
 
-    <!-- Аудио элементы -->
+    <!-- Аудио -->
     <audio id="bgm-player" loop></audio>
     <audio id="sfx-player"></audio>
 
