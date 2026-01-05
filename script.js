@@ -1,10 +1,10 @@
 /**
  * Движок визуальной новеллы
- * ver. 2.0.1 - Исправленная версия
+ * ver. 2.1.0 - С системой логов и передачей данных
  */
 
 // Глобальное состояние игры
-const gameState = {
+var gameState = {
     currentScene: 'start',
     currentStep: 0,
     isTyping: false,
@@ -13,6 +13,10 @@ const gameState = {
     skipMode: false,
     variables: {},
     history: [],
+    // История всех диалогов и выборов
+    storyLog: [],
+    // Текущий код сессии (для передачи данных)
+    sessionCode: '',
     settings: {
         musicVolume: 50,
         sfxVolume: 70,
@@ -21,14 +25,14 @@ const gameState = {
 };
 
 // Кэш ассетов
-const assetCache = {
+var assetCache = {
     backgrounds: {},
     characters: {},
     audio: {}
 };
 
 // Элементы DOM
-const elements = {
+var elements = {
     gameContainer: document.getElementById('game-container'),
     backgroundImage: document.getElementById('background-image'),
     characterLeft: document.getElementById('character-left'),
@@ -46,11 +50,209 @@ const elements = {
     controlPanel: document.getElementById('control-panel'),
     endingScreen: document.getElementById('ending-screen'),
     bgmPlayer: document.getElementById('bgm-player'),
-    sfxPlayer: document.getElementById('sfx-player')
+    sfxPlayer: document.getElementById('sfx-player'),
+    // Новые элементы для логов
+    logPanel: null,
+    logContent: null
 };
 
 // Таймеры
-let typingTimer = null;
+var typingTimer = null;
+
+/**
+ * Добавить запись в историю игры
+ */
+function addToLog(type, data) {
+    var timestamp = new Date().toLocaleTimeString('ru-RU');
+    var entry = {
+        type: type,
+        data: data,
+        time: timestamp
+    };
+    gameState.storyLog.push(entry);
+    console.log('[LOG]', type, data);
+}
+
+/**
+ * Получить текст всей истории
+ */
+function getStoryLogText() {
+    var text = [];
+    text.push('=== ИСТОРИЯ ПРОХОЖДЕНИЯ ===');
+    text.push('Дата: ' + new Date().toLocaleString('ru-RU'));
+    text.push('');
+    
+    gameState.storyLog.forEach(function(entry, index) {
+        if (entry.type === 'dialog') {
+            if (entry.data.name) {
+                text.push('[' + entry.time + '] ' + entry.data.name + ': ' + entry.data.text);
+            } else {
+                text.push('[' + entry.time + '] ' + entry.data.text);
+            }
+        } else if (entry.type === 'choice') {
+            text.push('[' + entry.time + '] >>> ВЫБОР: ' + entry.data.text);
+        } else if (entry.type === 'scene') {
+            text.push('');
+            text.push('--- ' + entry.data + ' ---');
+        }
+    });
+    
+    text.push('');
+    text.push('=== КОНЕЦ ===');
+    
+    return text.join('\n');
+}
+
+/**
+ * Показать панель истории
+ */
+function showLogPanel() {
+    // Создаём панель, если её нет
+    if (!elements.logPanel) {
+        elements.logPanel = document.createElement('div');
+        elements.logPanel.id = 'log-panel';
+        elements.logPanel.className = 'hidden';
+        elements.logPanel.innerHTML = 
+            '<div class="log-content">' +
+                '<h3>История прохождения</h3>' +
+                '<textarea id="log-text" readonly></textarea>' +
+                '<div class="log-buttons">' +
+                    '<button id="copy-log-btn">Копировать</button>' +
+                    '<button id="close-log-btn">Закрыть</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(elements.logPanel);
+        
+        // Обработчики кнопок
+        document.getElementById('copy-log-btn').addEventListener('click', copyLogToClipboard);
+        document.getElementById('close-log-btn').addEventListener('click', hideLogPanel);
+    }
+    
+    // Заполняем текстом
+    var logText = document.getElementById('log-text');
+    logText.value = getStoryLogText();
+    
+    // Показываем панель
+    elements.logPanel.classList.remove('hidden');
+}
+
+/**
+ * Скрыть панель истории
+ */
+function hideLogPanel() {
+    if (elements.logPanel) {
+        elements.logPanel.classList.add('hidden');
+    }
+}
+
+/**
+ * Копировать логи в буфер обмена
+ */
+function copyLogToClipboard() {
+    var logText = document.getElementById('log-text');
+    logText.select();
+    document.execCommand('copy');
+    showNotification('История скопирована в буфер обмена!');
+}
+
+/**
+ * Сгенерировать код передачи данных
+ */
+function generateTransferCode() {
+    var transferData = {
+        version: '1.0',
+        timestamp: Date.now(),
+        variables: gameState.variables,
+        history: gameState.history,
+        log: gameState.storyLog.slice(-10) // Последние 10 записей лога
+    };
+    
+    var code = btoa(encodeURIComponent(JSON.stringify(transferData)));
+    gameState.sessionCode = code;
+    
+    return code;
+}
+
+/**
+ * Получить данные из кода
+ */
+function parseTransferCode(code) {
+    try {
+        var decoded = JSON.parse(decodeURIComponent(atob(code)));
+        return decoded;
+    } catch (e) {
+        console.error('Ошибка разбора кода:', e);
+        return null;
+    }
+}
+
+/**
+ * Показать модальное окно передачи данных
+ */
+function showTransferModal() {
+    var modal = document.getElementById('transfer-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'transfer-modal';
+        modal.className = 'hidden';
+        modal.innerHTML = 
+            '<div class="transfer-content">' +
+                '<h3>Передача данных</h3>' +
+                '<p>Вставьте код ниже или скопируйте свой код для передачи:</p>' +
+                '<textarea id="transfer-input" placeholder="Вставьте код сюда..."></textarea>' +
+                '<div class="transfer-buttons">' +
+                    '<button id="generate-code-btn">Создать код</button>' +
+                    '<button id="import-code-btn">Импортировать</button>' +
+                    '<button id="close-transfer-btn">Закрыть</button>' +
+                '</div>' +
+                '<div id="generated-code" class="hidden"></div>' +
+            '</div>';
+        document.body.appendChild(modal);
+        
+        document.getElementById('generate-code-btn').addEventListener('click', function() {
+            var code = generateTransferCode();
+            var codeDiv = document.getElementById('generated-code');
+            codeDiv.innerHTML = '<p>Ваш код:</p><textarea readonly>' + code + '</textarea>';
+            codeDiv.classList.remove('hidden');
+            showNotification('Код сгенерирован!');
+        });
+        
+        document.getElementById('import-code-btn').addEventListener('click', function() {
+            var inputCode = document.getElementById('transfer-input').value.trim();
+            if (inputCode) {
+                var data = parseTransferCode(inputCode);
+                if (data) {
+                    // Применяем данные
+                    if (data.variables) {
+                        gameState.variables = Object.assign(gameState.variables, data.variables);
+                    }
+                    if (data.history && data.history.length > 0) {
+                        gameState.history = data.history;
+                    }
+                    if (data.log) {
+                        data.log.forEach(function(entry) {
+                            gameState.storyLog.push(entry);
+                        });
+                    }
+                    showNotification('Данные импортированы!');
+                    modal.classList.add('hidden');
+                } else {
+                    showNotification('Ошибка: неверный код');
+                }
+            } else {
+                showNotification('Вставьте код!');
+            }
+        });
+        
+        document.getElementById('close-transfer-btn').addEventListener('click', function() {
+            modal.classList.add('hidden');
+        });
+    }
+    
+    modal.classList.remove('hidden');
+    document.getElementById('transfer-input').value = '';
+    document.getElementById('generated-code').classList.add('hidden');
+}
 
 /**
  * Инициализация игры
@@ -68,30 +270,52 @@ function initGame() {
     
     console.log('Движок готов. Сцены:', Object.keys(gameData.scenes || {}));
     showNotification('Движок загружен!');
+    
+    // Добавляем кнопки логов и передачи в панель управления
+    addControlButtons();
+}
+
+/**
+ * Добавить кнопки в панель управления
+ */
+function addControlButtons() {
+    var panel = document.getElementById('control-panel');
+    
+    // Кнопка истории
+    var logBtn = document.createElement('button');
+    logBtn.id = 'log-btn';
+    logBtn.title = 'История';
+    logBtn.innerHTML = '📖';
+    logBtn.addEventListener('click', showLogPanel);
+    panel.insertBefore(logBtn, panel.firstChild);
+    
+    // Кнопка передачи данных
+    var transferBtn = document.createElement('button');
+    transferBtn.id = 'transfer-btn';
+    transferBtn.title = 'Передать данные';
+    transferBtn.innerHTML = '🔗';
+    transferBtn.addEventListener('click', showTransferModal);
+    panel.insertBefore(transferBtn, panel.firstChild);
 }
 
 /**
  * Настройка обработчиков событий
  */
 function setupEventListeners() {
-    // Клик по диалоговому окну
     elements.dialogBox.addEventListener('click', handleDialogClick);
     elements.gameContainer.addEventListener('keydown', handleKeyDown);
 
-    // Кнопки меню
     document.getElementById('start-game-btn').addEventListener('click', startGame);
     document.getElementById('continue-game-btn').addEventListener('click', continueGame);
     document.getElementById('settings-btn').addEventListener('click', openSettings);
     document.getElementById('close-settings').addEventListener('click', closeSettings);
 
-    // Панель управления
     document.getElementById('menu-btn').addEventListener('click', toggleMainMenu);
     document.getElementById('save-btn').addEventListener('click', quickSave);
     document.getElementById('load-btn').addEventListener('click', quickLoad);
     document.getElementById('settings-panel-btn').addEventListener('click', openSettings);
     document.getElementById('skip-btn').addEventListener('click', toggleSkipMode);
 
-    // Настройки
     document.getElementById('music-volume').addEventListener('input', updateMusicVolume);
     document.getElementById('sfx-volume').addEventListener('input', updateSfxVolume);
     document.getElementById('text-speed').addEventListener('input', updateTextSpeed);
@@ -106,11 +330,9 @@ function setupEventListeners() {
     });
     document.getElementById('reset-game-btn').addEventListener('click', resetGame);
 
-    // Кнопки концовки
     document.getElementById('restart-btn').addEventListener('click', restartGame);
     document.getElementById('back-to-menu-btn').addEventListener('click', backToMenu);
 
-    // Полноэкранный режим
     elements.gameContainer.addEventListener('dblclick', toggleFullscreen);
 }
 
@@ -138,8 +360,10 @@ function handleKeyDown(e) {
         case 'Escape':
             if (!elements.settingsMenu.classList.contains('hidden')) {
                 closeSettings();
-            } else if (elements.mainMenu.classList.contains('hidden')) {
-                openSettings();
+            } else if (!elements.logPanel || elements.logPanel.classList.contains('hidden')) {
+                if (elements.mainMenu.classList.contains('hidden')) {
+                    openSettings();
+                }
             }
             break;
         case 's':
@@ -171,8 +395,10 @@ function startGame() {
     gameState.currentStep = 0;
     gameState.variables = {};
     gameState.history = [];
+    gameState.storyLog = [];
+    
+    addToLog('scene', 'Начало игры');
 
-    // Небольшая задержка для визуального эффекта
     setTimeout(function() {
         elements.loadingScreen.classList.add('hidden');
         elements.controlPanel.classList.add('visible');
@@ -197,17 +423,17 @@ function continueGame() {
 function playScene(sceneId) {
     console.log('Воспроизведение сцены:', sceneId);
     
+    addToLog('scene', 'Сцена: ' + sceneId);
+    
     var scene = gameData.scenes[sceneId];
     if (!scene) {
         console.error('Сцена "' + sceneId + '" не найдена!');
-        console.log('Доступные сцены:', Object.keys(gameData.scenes));
         showNotification('Ошибка: сцена не найдена');
         return;
     }
 
     gameState.currentScene = sceneId;
     gameState.currentStep = 0;
-    gameState.history = [];
 
     executeStep(sceneId, 0);
 }
@@ -218,7 +444,6 @@ function playScene(sceneId) {
 function executeStep(sceneId, stepIndex) {
     var scene = gameData.scenes[sceneId];
     if (!scene || stepIndex >= scene.length) {
-        console.log('Сцена "' + sceneId + '" завершена');
         return;
     }
 
@@ -243,6 +468,8 @@ function executeStep(sceneId, stepIndex) {
 
         case 'say':
             showDialog(step.name, step.text);
+            // Записываем в лог
+            addToLog('dialog', { name: step.name, text: step.text });
             break;
 
         case 'choice':
@@ -284,10 +511,10 @@ function executeStep(sceneId, stepIndex) {
 
         case 'ending':
             showEnding(step.title, step.text);
+            addToLog('dialog', { name: '', text: step.title + ': ' + step.text });
             break;
 
         default:
-            console.warn('Неизвестный тип шага: ' + step.type);
             nextStep();
     }
 }
@@ -297,15 +524,9 @@ function executeStep(sceneId, stepIndex) {
  */
 function nextStep() {
     gameState.currentStep++;
-
     var scene = gameState.currentScene;
     if (!gameData.scenes[scene]) return;
-
-    if (gameState.currentStep >= gameData.scenes[scene].length) {
-        console.log('Сцена "' + scene + '" завершена');
-        return;
-    }
-
+    if (gameState.currentStep >= gameData.scenes[scene].length) return;
     executeStep(scene, gameState.currentStep);
 }
 
@@ -313,16 +534,11 @@ function nextStep() {
  * Смена фона
  */
 function changeBackground(src) {
-    console.log('Смена фона на:', src);
-    
-    // Если src это ключ ассета, пробуем загрузить
     if (gameData.assets && gameData.assets.backgrounds && gameData.assets.backgrounds[src]) {
         elements.backgroundImage.src = gameData.assets.backgrounds[src];
     } else {
-        // Используем напрямую (заглушка или путь)
         elements.backgroundImage.src = src;
     }
-    
     elements.backgroundImage.onload = function() {
         elements.backgroundImage.classList.add('loaded');
     };
@@ -332,12 +548,9 @@ function changeBackground(src) {
  * Показать персонажа
  */
 function showCharacter(charId, position, emotion) {
-    console.log('Показать персонажа:', charId, position, emotion);
-    
     var key = emotion ? charId + '_' + emotion : charId;
-    var src = charId; // По умолчанию используем как путь
+    var src = charId;
 
-    // Пробуем найти в ассетах
     if (gameData.assets && gameData.assets.characters) {
         if (gameData.assets.characters[key]) {
             src = gameData.assets.characters[key];
@@ -349,14 +562,11 @@ function showCharacter(charId, position, emotion) {
     var slot = getCharacterSlot(position);
     if (!slot) return;
 
-    // Создаём изображение персонажа
     var img = document.createElement('img');
     img.src = src;
     img.alt = charId;
     img.style.display = 'none';
-    img.onload = function() {
-        img.style.display = 'block';
-    };
+    img.onload = function() { img.style.display = 'block'; };
     
     slot.innerHTML = '';
     slot.appendChild(img);
@@ -369,11 +579,8 @@ function showCharacter(charId, position, emotion) {
 function hideCharacter(position) {
     var slot = getCharacterSlot(position);
     if (!slot) return;
-
     slot.classList.remove('visible');
-    setTimeout(function() {
-        slot.innerHTML = '';
-    }, 400);
+    setTimeout(function() { slot.innerHTML = ''; }, 400);
 }
 
 /**
@@ -421,16 +628,12 @@ function showDialog(name, text) {
  */
 function completeTyping() {
     if (!gameState.isTyping) return;
-
     clearTimeout(typingTimer);
-
     var scene = gameData.scenes[gameState.currentScene];
     var step = scene && scene[gameState.currentStep];
-
     if (step && step.type === 'say') {
         elements.dialogText.textContent = step.text;
     }
-
     gameState.isTyping = false;
     gameState.typingComplete = true;
     elements.dialogText.classList.remove('text-typing');
@@ -453,14 +656,14 @@ function showChoices(options) {
         btn.className = 'choice-btn';
         btn.textContent = option.text;
         btn.addEventListener('click', function() {
-            if (option.text) {
-                gameState.history.push({
-                    type: 'choice',
-                    text: option.text,
-                    jump: option.jump
-                });
-            }
-
+            // Записываем выбор в историю и лог
+            gameState.history.push({
+                type: 'choice',
+                text: option.text,
+                jump: option.jump
+            });
+            addToLog('choice', { text: option.text, jump: option.jump });
+            
             hideChoices();
             playScene(option.jump);
         });
@@ -484,12 +687,9 @@ function checkCondition(condition) {
     try {
         var match = condition.match(/(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+)/);
         if (match) {
-            var variable = match[1];
-            var operator = match[2];
-            var value = match[3];
+            var variable = match[1], operator = match[2], value = match[3];
             var varValue = gameState.variables[variable];
             var numValue = parseFloat(value);
-
             switch (operator) {
                 case '==': return varValue == numValue;
                 case '!=': return varValue != numValue;
@@ -499,14 +699,11 @@ function checkCondition(condition) {
                 case '<=': return varValue <= numValue;
             }
         }
-
         if (condition.charAt(0) === '!') {
             return !gameState.variables[condition.slice(1)];
         }
-
         return !!gameState.variables[condition];
     } catch (e) {
-        console.warn('Ошибка проверки условия:', condition, e);
         return false;
     }
 }
@@ -523,18 +720,13 @@ function setVariable(name, value) {
  */
 function playAudio(key, loop) {
     var src = key;
-
     if (gameData.assets && gameData.assets.audio && gameData.assets.audio[key]) {
         src = gameData.assets.audio[key];
     }
-
     elements.bgmPlayer.src = src;
     elements.bgmPlayer.loop = loop !== false;
     elements.bgmPlayer.volume = gameState.settings.musicVolume / 100;
-    
-    elements.bgmPlayer.play().catch(function(err) {
-        console.log('Не удалось воспроизвести аудио:', src);
-    });
+    elements.bgmPlayer.play().catch(function() {});
 }
 
 /**
@@ -563,14 +755,12 @@ function loadSettings() {
         var settings = JSON.parse(saved);
         gameState.settings = Object.assign(gameState.settings, settings);
     }
-
     document.getElementById('music-volume').value = gameState.settings.musicVolume;
     document.getElementById('sfx-volume').value = gameState.settings.sfxVolume;
     document.getElementById('text-speed').value = gameState.settings.textSpeed;
     document.getElementById('music-volume-value').textContent = gameState.settings.musicVolume + '%';
     document.getElementById('sfx-volume-value').textContent = gameState.settings.sfxVolume + '%';
     document.getElementById('text-speed-value').textContent = gameState.settings.textSpeed;
-
     elements.bgmPlayer.volume = gameState.settings.musicVolume / 100;
     elements.sfxPlayer.volume = gameState.settings.sfxVolume / 100;
 }
@@ -608,6 +798,7 @@ function saveGame() {
         step: gameState.currentStep,
         variables: gameState.variables,
         history: gameState.history,
+        storyLog: gameState.storyLog,
         timestamp: Date.now()
     };
     localStorage.setItem('visualNovelSave', JSON.stringify(saveData));
@@ -620,58 +811,36 @@ function loadGame() {
         showNotification('Нет сохранённой игры');
         return false;
     }
-
     var saveData = JSON.parse(saved);
-
     gameState.currentScene = saveData.scene;
     gameState.currentStep = saveData.step;
     gameState.variables = saveData.variables || {};
     gameState.history = saveData.history || [];
-
+    gameState.storyLog = saveData.storyLog || [];
     playScene(gameState.currentScene);
-
     showNotification('Игра загружена');
     return true;
 }
 
-/**
- * Быстрое сохранение
- */
-function quickSave() {
-    saveGame();
-}
+function quickSave() { saveGame(); }
 
-/**
- * Быстрая загрузка
- */
 function quickLoad() {
-    if (!loadGame()) {
-        if (elements.mainMenu.classList.contains('hidden')) {
-            toggleMainMenu();
-        }
+    if (!loadGame() && elements.mainMenu.classList.contains('hidden')) {
+        toggleMainMenu();
     }
 }
 
-/**
- * Сброс игры
- */
 function resetGame() {
     localStorage.removeItem('visualNovelSave');
     showNotification('Сохранение удалено');
     closeSettings();
 }
 
-/**
- * Перезапуск игры
- */
 function restartGame() {
     elements.endingScreen.classList.add('hidden');
     startGame();
 }
 
-/**
- * Возврат в меню
- */
 function backToMenu() {
     elements.endingScreen.classList.add('hidden');
     stopAudio();
@@ -679,9 +848,6 @@ function backToMenu() {
     elements.controlPanel.classList.remove('visible');
 }
 
-/**
- * Переключение главного меню
- */
 function toggleMainMenu() {
     if (elements.mainMenu.classList.contains('hidden')) {
         elements.mainMenu.classList.remove('hidden');
@@ -692,23 +858,9 @@ function toggleMainMenu() {
     }
 }
 
-/**
- * Открыть настройки
- */
-function openSettings() {
-    elements.settingsMenu.classList.remove('hidden');
-}
+function openSettings() { elements.settingsMenu.classList.remove('hidden'); }
+function closeSettings() { elements.settingsMenu.classList.add('hidden'); }
 
-/**
- * Закрыть настройки
- */
-function closeSettings() {
-    elements.settingsMenu.classList.add('hidden');
-}
-
-/**
- * Переключить режим пропуска
- */
 function toggleSkipMode() {
     gameState.skipMode = !gameState.skipMode;
     var btn = document.getElementById('skip-btn');
@@ -716,9 +868,6 @@ function toggleSkipMode() {
     showNotification(gameState.skipMode ? 'Режим пропуска включён' : 'Режим пропуска выключен');
 }
 
-/**
- * Переключение полноэкранного режима
- */
 function toggleFullscreen() {
     if (document.fullscreenElement) {
         document.exitFullscreen();
@@ -727,33 +876,21 @@ function toggleFullscreen() {
     }
 }
 
-/**
- * Показать уведомление
- */
 function showNotification(message) {
     var notification = document.getElementById('notification');
-
     if (!notification) {
         notification = document.createElement('div');
         notification.id = 'notification';
         document.body.appendChild(notification);
     }
-
     notification.textContent = message;
     notification.classList.add('show');
-
-    setTimeout(function() {
-        notification.classList.remove('show');
-    }, 2000);
+    setTimeout(function() { notification.classList.remove('show'); }, 2000);
 }
 
-/**
- * Проверка наличия сохранённой игры
- */
 function checkSaveData() {
     var saved = localStorage.getItem('visualNovelSave');
     var continueBtn = document.getElementById('continue-game-btn');
-
     if (saved) {
         continueBtn.disabled = false;
         continueBtn.style.opacity = '1';
@@ -763,10 +900,8 @@ function checkSaveData() {
     }
 }
 
-// Запуск инициализации при загрузке страницы
 document.addEventListener('DOMContentLoaded', initGame);
 
-// Глобальные функции для отладки
 window.gameDebug = {
     getState: function() { return gameState; },
     getData: function() { return gameData; },
@@ -781,5 +916,15 @@ window.gameDebug = {
     clearSave: function() {
         localStorage.removeItem('visualNovelSave');
         showNotification('Сохранение очищено');
+    },
+    getLog: function() { return getStoryLogText(); },
+    generateCode: function() { return generateTransferCode(); },
+    importCode: function(code) {
+        var data = parseTransferCode(code);
+        if (data && data.variables) {
+            gameState.variables = Object.assign(gameState.variables, data.variables);
+            return true;
+        }
+        return false;
     }
 };
