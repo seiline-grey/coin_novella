@@ -62,6 +62,10 @@ function initGame() {
     loadSettings();
     checkSaveData();
     
+    // Скрыть экран загрузки и показать главное меню
+    elements.loadingScreen.classList.add('hidden');
+    elements.mainMenu.classList.remove('hidden');
+    
     console.log('Движок готов. Сцены:', Object.keys(gameData.scenes || {}));
     showNotification('Движок загружен!');
 }
