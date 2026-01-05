@@ -1,0 +1,901 @@
+/**
+ * Движок визуальной новеллы
+ * ver. 1.0.0
+ */
+
+// Глобальное состояние игры
+const gameState = {
+    currentScene: 'start',
+    currentStep: 0,
+    isTyping: false,
+    typingComplete: false,
+    autoMode: false,
+    skipMode: false,
+    variables: {},
+    history: [],
+    settings: {
+        musicVolume: 50,
+        sfxVolume: 70,
+        textSpeed: 30
+    }
+};
+
+// Кэш ассетов
+const assetCache = {
+    backgrounds: {},
+    characters: {},
+    audio: {}
+};
+
+// Элементы DOM
+const elements = {
+    gameContainer: document.getElementById('game-container'),
+    backgroundImage: document.getElementById('background-image'),
+    characterLeft: document.getElementById('character-left'),
+    characterCenter: document.getElementById('character-center'),
+    characterRight: document.getElementById('character-right'),
+    dialogBox: document.getElementById('dialog-box'),
+    speakerName: document.getElementById('speaker-name'),
+    dialogText: document.getElementById('dialog-text'),
+    nextIndicator: document.getElementById('next-indicator'),
+    choiceMenu: document.getElementById('choice-menu'),
+    choiceContainer: document.getElementById('choice-container'),
+    settingsMenu: document.getElementById('settings-menu'),
+    mainMenu: document.getElementById('main-menu'),
+    loadingScreen: document.getElementById('loading-screen'),
+    controlPanel: document.getElementById('control-panel'),
+    endingScreen: document.getElementById('ending-screen'),
+    bgmPlayer: document.getElementById('bgm-player'),
+    sfxPlayer: document.getElementById('sfx-player')
+};
+
+// Таймеры
+let typingTimer = null;
+let autoModeTimer = null;
+
+/**
+ * Инициализация игры
+ */
+function initGame() {
+    setupEventListeners();
+    loadSettings();
+    checkSaveData();
+    showNotification('Движок визуальной новеллы загружен');
+}
+
+/**
+ * Настройка обработчиков событий
+ */
+function setupEventListeners() {
+    // Клик по диалоговому окну
+    elements.dialogBox.addEventListener('click', handleDialogClick);
+    elements.gameContainer.addEventListener('keydown', handleKeyDown);
+
+    // Кнопки меню
+    document.getElementById('start-game-btn').addEventListener('click', startGame);
+    document.getElementById('continue-game-btn').addEventListener('click', continueGame);
+    document.getElementById('settings-btn').addEventListener('click', openSettings);
+    document.getElementById('close-settings').addEventListener('click', closeSettings);
+
+    // Панель управления
+    document.getElementById('menu-btn').addEventListener('click', toggleMainMenu);
+    document.getElementById('save-btn').addEventListener('click', quickSave);
+    document.getElementById('load-btn').addEventListener('click', quickLoad);
+    document.getElementById('settings-panel-btn').addEventListener('click', openSettings);
+    document.getElementById('skip-btn').addEventListener('click', toggleSkipMode);
+
+    // Настройки
+    document.getElementById('music-volume').addEventListener('input', updateMusicVolume);
+    document.getElementById('sfx-volume').addEventListener('input', updateSfxVolume);
+    document.getElementById('text-speed').addEventListener('input', updateTextSpeed);
+    document.getElementById('save-game-btn').addEventListener('click', () => {
+        saveGame();
+        showNotification('Игра сохранена');
+    });
+    document.getElementById('load-game-btn').addEventListener('click', () => {
+        loadGame();
+        closeSettings();
+        showNotification('Игра загружена');
+    });
+    document.getElementById('reset-game-btn').addEventListener('click', resetGame);
+
+    // Кнопки концовки
+    document.getElementById('restart-btn').addEventListener('click', restartGame);
+    document.getElementById('back-to-menu-btn').addEventListener('click', backToMenu);
+
+    // Полноэкранный режим
+    elements.gameContainer.addEventListener('dblclick', toggleFullscreen);
+}
+
+/**
+ * Обработка клика по диалогу
+ */
+function handleDialogClick() {
+    if (gameState.isTyping) {
+        // Мгновенное завершение печатания текста
+        completeTyping();
+    } else {
+        // Переход к следующему шагу
+        nextStep();
+    }
+}
+
+/**
+ * Обработка нажатия клавиш
+ */
+function handleKeyDown(e) {
+    switch (e.key) {
+        case ' ':
+        case 'Enter':
+            e.preventDefault();
+            handleDialogClick();
+            break;
+        case 'Escape':
+            if (!elements.settingsMenu.classList.contains('hidden')) {
+                closeSettings();
+            } else if (elements.mainMenu.classList.contains('hidden')) {
+                openSettings();
+            }
+            break;
+        case 's':
+        case 'S':
+            if (!e.ctrlKey) {
+                quickSave();
+            }
+            break;
+        case 'l':
+        case 'L':
+            if (!e.ctrlKey) {
+                quickLoad();
+            }
+            break;
+    }
+}
+
+/**
+ * Начало игры
+ */
+function startGame() {
+    elements.mainMenu.classList.add('hidden');
+    elements.loadingScreen.classList.remove('hidden');
+
+    // Сброс состояния
+    gameState.currentScene = 'start';
+    gameState.currentStep = 0;
+    gameState.variables = {};
+    gameState.history = [];
+
+    // Предзагрузка ассетов
+    preloadAssets().then(() => {
+        elements.loadingScreen.classList.add('hidden');
+        elements.controlPanel.classList.add('visible');
+        playScene('start');
+    });
+}
+
+/**
+ * Продолжение сохранённой игры
+ */
+function continueGame() {
+    if (localStorage.getItem('visualNovelSave')) {
+        loadGame();
+    } else {
+        showNotification('Нет сохранённой игры');
+    }
+}
+
+/**
+ * Предзагрузка всех ассетов
+ */
+async function preloadAssets() {
+    const tasks = [];
+
+    // Предзагрузка фонов
+    if (gameData.assets && gameData.assets.backgrounds) {
+        for (const [key, path] of Object.entries(gameData.assets.backgrounds)) {
+            tasks.push(preloadImage(path, 'backgrounds', key));
+        }
+    }
+
+    // Предзагрузка персонажей
+    if (gameData.assets && gameData.assets.characters) {
+        for (const [key, path] of Object.entries(gameData.assets.characters)) {
+            tasks.push(preloadImage(path, 'characters', key));
+        }
+    }
+
+    // Предзагрузка аудио
+    if (gameData.assets && gameData.assets.audio) {
+        for (const [key, path] of Object.entries(gameData.assets.audio)) {
+            tasks.push(preloadAudio(path, key));
+        }
+    }
+
+    await Promise.all(tasks);
+    console.log('Все ассеты загружены');
+}
+
+/**
+ * Предзагрузка изображения
+ */
+function preloadImage(path, type, key) {
+    return new Promise((resolve) => {
+        if (assetCache[type] && assetCache[type][key]) {
+            resolve();
+            return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+            if (!assetCache[type]) assetCache[type] = {};
+            assetCache[type][key] = img;
+            resolve();
+        };
+        img.onerror = () => {
+            console.warn(`Не удалось загрузить изображение: ${path}`);
+            resolve();
+        };
+        img.src = path;
+    });
+}
+
+/**
+ * Предзагрузка аудио
+ */
+function preloadAudio(path, key) {
+    return new Promise((resolve) => {
+        if (assetCache.audio && assetCache.audio[key]) {
+            resolve();
+            return;
+        }
+
+        const audio = new Audio();
+        audio.oncanplaythrough = () => {
+            if (!assetCache.audio) assetCache.audio = {};
+            assetCache.audio[key] = audio;
+            resolve();
+        };
+        audio.onerror = () => {
+            console.warn(`Не удалось загрузить аудио: ${path}`);
+            resolve();
+        };
+        audio.src = path;
+        audio.load();
+    });
+}
+
+/**
+ * Воспроизведение сцены
+ */
+function playScene(sceneId) {
+    const scene = gameData.scenes[sceneId];
+    if (!scene) {
+        console.error(`Сцена "${sceneId}" не найдена`);
+        return;
+    }
+
+    gameState.currentScene = sceneId;
+    gameState.currentStep = 0;
+    gameState.history = [];
+
+    executeStep(sceneId, 0);
+}
+
+/**
+ * Выполнение шага сцены
+ */
+function executeStep(sceneId, stepIndex) {
+    const scene = gameData.scenes[sceneId];
+    if (!scene || stepIndex >= scene.length) {
+        // Конец сцены
+        return;
+    }
+
+    const step = scene[stepIndex];
+
+    switch (step.type) {
+        case 'bg':
+            changeBackground(step.src);
+            nextStep();
+            break;
+
+        case 'show':
+            showCharacter(step.char, step.pos, step.emotion);
+            nextStep();
+            break;
+
+        case 'hide':
+            hideCharacter(step.pos);
+            nextStep();
+            break;
+
+        case 'say':
+            showDialog(step.name, step.text);
+            break;
+
+        case 'choice':
+            showChoices(step.options);
+            break;
+
+        case 'jump':
+            playScene(step.to);
+            break;
+
+        case 'play':
+            playAudio(step.src, step.loop !== false);
+            nextStep();
+            break;
+
+        case 'stop':
+            stopAudio();
+            nextStep();
+            break;
+
+        case 'set':
+            setVariable(step.name, step.value);
+            nextStep();
+            break;
+
+        case 'if':
+            if (checkCondition(step.condition)) {
+                playScene(step.to);
+            } else if (step.else) {
+                playScene(step.else);
+            } else {
+                nextStep();
+            }
+            break;
+
+        case 'wait':
+            setTimeout(nextStep, step.duration || 1000);
+            break;
+
+        case 'ending':
+            showEnding(step.title, step.text);
+            break;
+
+        default:
+            console.warn(`Неизвестный тип шага: ${step.type}`);
+            nextStep();
+    }
+}
+
+/**
+ * Переход к следующему шагу
+ */
+function nextStep() {
+    const scene = gameState.currentScene;
+
+    if (gameState.skipMode) {
+        // В режиме пропуска пропускаем диалоги
+        const originalType = gameData.scenes[scene][gameState.currentStep].type;
+        if (originalType === 'say' || originalType === 'wait') {
+            gameState.currentStep++;
+            executeStep(scene, gameState.currentStep);
+            return;
+        }
+    }
+
+    gameState.currentStep++;
+
+    if (gameState.currentStep >= gameData.scenes[scene].length) {
+        // Конец сцены - ищем переход или завершаем
+        console.log(`Сцена "${scene}" завершена`);
+        return;
+    }
+
+    executeStep(scene, gameState.currentStep);
+}
+
+/**
+ * Смена фона
+ */
+function changeBackground(src) {
+    if (assetCache.backgrounds && assetCache.backgrounds[src]) {
+        elements.backgroundImage.src = assetCache.backgrounds[src].src;
+    } else {
+        elements.backgroundImage.src = src;
+    }
+
+    elements.backgroundImage.onload = () => {
+        elements.backgroundImage.classList.add('loaded');
+    };
+}
+
+/**
+ * Показать персонажа
+ */
+function showCharacter(charId, position, emotion = 'normal') {
+    const key = emotion ? `${charId}_${emotion}` : charId;
+    let src;
+
+    if (gameData.assets && gameData.assets.characters &&
+        gameData.assets.characters[key]) {
+        src = gameData.assets.characters[key];
+    } else if (gameData.assets && gameData.assets.characters &&
+               gameData.assets.characters[charId]) {
+        src = gameData.assets.characters[charId];
+    } else {
+        src = charId; // Использовать как путь напрямую
+    }
+
+    const slot = getCharacterSlot(position);
+    if (!slot) return;
+
+    const img = assetCache.characters && assetCache.characters[key] ?
+                assetCache.characters[key].src :
+                (assetCache.characters && assetCache.characters[charId] ?
+                 assetCache.characters[charId].src : src);
+
+    slot.innerHTML = `<img src="${img}" alt="${charId}">`;
+    slot.classList.add('visible');
+}
+
+/**
+ * Скрыть персонажа
+ */
+function hideCharacter(position) {
+    const slot = getCharacterSlot(position);
+    if (!slot) return;
+
+    slot.classList.remove('visible');
+    setTimeout(() => {
+        slot.innerHTML = '';
+    }, 400);
+}
+
+/**
+ * Получить слот персонажа
+ */
+function getCharacterSlot(position) {
+    switch (position) {
+        case 'left':
+            return elements.characterLeft;
+        case 'center':
+            return elements.characterCenter;
+        case 'right':
+            return elements.characterRight;
+        default:
+            return null;
+    }
+}
+
+/**
+ * Показать диалог
+ */
+function showDialog(name, text) {
+    gameState.isTyping = true;
+    gameState.typingComplete = false;
+
+    elements.speakerName.textContent = name || '';
+    elements.dialogText.textContent = '';
+    elements.dialogText.classList.add('text-typing');
+    elements.nextIndicator.style.display = 'none';
+
+    const speed = 101 - gameState.settings.textSpeed;
+    let charIndex = 0;
+
+    function typeChar() {
+        if (charIndex < text.length) {
+            elements.dialogText.textContent += text[charIndex];
+            charIndex++;
+
+            // Воспроизведение звука печатания (опционально)
+            // playTypingSound();
+
+            typingTimer = setTimeout(typeChar, speed);
+        } else {
+            completeTyping();
+        }
+    }
+
+    typeChar();
+}
+
+/**
+ * Завершить печатание текста
+ */
+function completeTyping() {
+    if (!gameState.isTyping) return;
+
+    clearTimeout(typingTimer);
+
+    const scene = gameData.scenes[gameState.currentScene];
+    const step = scene[gameState.currentStep];
+
+    if (step && step.type === 'say') {
+        elements.dialogText.textContent = step.text;
+    }
+
+    gameState.isTyping = false;
+    gameState.typingComplete = true;
+    elements.dialogText.classList.remove('text-typing');
+    elements.nextIndicator.style.display = 'block';
+}
+
+/**
+ * Показать варианты выбора
+ */
+function showChoices(options) {
+    elements.choiceContainer.innerHTML = '';
+    elements.choiceMenu.classList.remove('hidden');
+
+    options.forEach((option, index) => {
+        // Проверка условий отображения
+        if (option.condition && !checkCondition(option.condition)) {
+            return;
+        }
+
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = option.text;
+        btn.addEventListener('click', () => {
+            // Сохранение выбора в историю
+            if (option.text) {
+                gameState.history.push({
+                    type: 'choice',
+                    text: option.text,
+                    jump: option.jump
+                });
+            }
+
+            hideChoices();
+            playScene(option.jump);
+        });
+
+        elements.choiceContainer.appendChild(btn);
+    });
+}
+
+/**
+ * Скрыть меню выбора
+ */
+function hideChoices() {
+    elements.choiceMenu.classList.add('hidden');
+    elements.choiceContainer.innerHTML = '';
+}
+
+/**
+ * Проверка условия
+ */
+function checkCondition(condition) {
+    try {
+        // Поддержка простых условий типа "respect > 5"
+        const match = condition.match(/(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+)/);
+        if (match) {
+            const [, variable, operator, value] = match;
+            const varValue = gameState.variables[variable];
+            const numValue = parseFloat(value);
+
+            switch (operator) {
+                case '==': return varValue == numValue;
+                case '!=': return varValue != numValue;
+                case '>': return varValue > numValue;
+                case '<': return varValue < numValue;
+                case '>=': return varValue >= numValue;
+                case '<=': return varValue <= numValue;
+            }
+        }
+
+        // Поддержка булевых переменных
+        if (condition.startsWith('!')) {
+            return !gameState.variables[condition.slice(1)];
+        }
+
+        return !!gameState.variables[condition];
+    } catch (e) {
+        console.warn(`Ошибка проверки условия: ${condition}`, e);
+        return false;
+    }
+}
+
+/**
+ * Установка переменной
+ */
+function setVariable(name, value) {
+    gameState.variables[name] = value;
+}
+
+/**
+ * Воспроизведение аудио
+ */
+function playAudio(key, loop = true) {
+    let src;
+
+    if (gameData.assets && gameData.assets.audio && gameData.assets.audio[key]) {
+        src = gameData.assets.audio[key];
+    } else {
+        src = key;
+    }
+
+    if (assetCache.audio && assetCache.audio[key]) {
+        const cachedAudio = assetCache.audio[key].cloneNode();
+        cachedAudio.loop = loop;
+        cachedAudio.volume = gameState.settings.musicVolume / 100;
+
+        // Остановка предыдущей музыки
+        elements.bgmPlayer.pause();
+        elements.bgmPlayer.src = '';
+        elements.bgmPlayer = cachedAudio;
+        elements.bgmPlayer.play().catch(() => {});
+    } else {
+        elements.bgmPlayer.src = src;
+        elements.bgmPlayer.loop = loop;
+        elements.bgmPlayer.volume = gameState.settings.musicVolume / 100;
+        elements.bgmPlayer.play().catch(() => {});
+    }
+}
+
+/**
+ * Остановка аудио
+ */
+function stopAudio() {
+    elements.bgmPlayer.pause();
+    elements.bgmPlayer.currentTime = 0;
+}
+
+/**
+ * Показать экран концовки
+ */
+function showEnding(title, text) {
+    elements.endingScreen.classList.remove('hidden');
+    document.getElementById('ending-title').textContent = title || 'Конец';
+    document.getElementById('ending-text').textContent = text || '';
+}
+
+/**
+ * Управление настройками
+ */
+function loadSettings() {
+    const saved = localStorage.getItem('visualNovelSettings');
+    if (saved) {
+        const settings = JSON.parse(saved);
+        gameState.settings = { ...gameState.settings, ...settings };
+    }
+
+    // Применение настроек к элементам
+    document.getElementById('music-volume').value = gameState.settings.musicVolume;
+    document.getElementById('sfx-volume').value = gameState.settings.sfxVolume;
+    document.getElementById('text-speed').value = gameState.settings.textSpeed;
+    document.getElementById('music-volume-value').textContent = gameState.settings.musicVolume + '%';
+    document.getElementById('sfx-volume-value').textContent = gameState.settings.sfxVolume + '%';
+    document.getElementById('text-speed-value').textContent = gameState.settings.textSpeed;
+
+    elements.bgmPlayer.volume = gameState.settings.musicVolume / 100;
+    elements.sfxPlayer.volume = gameState.settings.sfxVolume / 100;
+}
+
+function updateMusicVolume(e) {
+    gameState.settings.musicVolume = parseInt(e.target.value);
+    document.getElementById('music-volume-value').textContent = e.target.value + '%';
+    elements.bgmPlayer.volume = e.target.value / 100;
+    saveSettings();
+}
+
+function updateSfxVolume(e) {
+    gameState.settings.sfxVolume = parseInt(e.target.value);
+    document.getElementById('sfx-volume-value').textContent = e.target.value + '%';
+    elements.sfxPlayer.volume = e.target.value / 100;
+    saveSettings();
+}
+
+function updateTextSpeed(e) {
+    gameState.settings.textSpeed = parseInt(e.target.value);
+    document.getElementById('text-speed-value').textContent = e.target.value;
+    saveSettings();
+}
+
+function saveSettings() {
+    localStorage.setItem('visualNovelSettings', JSON.stringify(gameState.settings));
+}
+
+/**
+ * Сохранение и загрузка игры
+ */
+function saveGame() {
+    const saveData = {
+        scene: gameState.currentScene,
+        step: gameState.currentStep,
+        variables: gameState.variables,
+        history: gameState.history,
+        timestamp: Date.now()
+    };
+    localStorage.setItem('visualNovelSave', JSON.stringify(saveData));
+    showNotification('Игра сохранена');
+}
+
+function loadGame() {
+    const saved = localStorage.getItem('visualNovelSave');
+    if (!saved) {
+        showNotification('Нет сохранённой игры');
+        return false;
+    }
+
+    const saveData = JSON.parse(saved);
+
+    // Восстановление состояния
+    gameState.currentScene = saveData.scene;
+    gameState.currentStep = saveData.step;
+    gameState.variables = saveData.variables || {};
+    gameState.history = saveData.history || [];
+
+    // Переход к сохранённой сцене
+    playScene(gameState.currentScene);
+
+    // Пропуск до нужного шага
+    for (let i = 0; i < gameState.currentStep; i++) {
+        // Восстановление визуального состояния
+        const step = gameData.scenes[gameState.currentScene][i];
+        if (step) {
+            applyVisualState(step);
+        }
+    }
+
+    showNotification('Игра загружена');
+    return true;
+}
+
+/**
+ * Применение визуального состояния шага
+ */
+function applyVisualState(step) {
+    switch (step.type) {
+        case 'bg':
+            changeBackground(step.src);
+            break;
+        case 'show':
+            showCharacter(step.char, step.pos, step.emotion);
+            break;
+    }
+}
+
+/**
+ * Быстрое сохранение
+ */
+function quickSave() {
+    saveGame();
+}
+
+/**
+ * Быстрая загрузка
+ */
+function quickLoad() {
+    if (!loadGame()) {
+        // Если нет сохранения, показать меню
+        if (elements.mainMenu.classList.contains('hidden')) {
+            toggleMainMenu();
+        }
+    }
+}
+
+/**
+ * Сброс игры
+ */
+function resetGame() {
+    localStorage.removeItem('visualNovelSave');
+    showNotification('Сохранение удалено');
+    closeSettings();
+}
+
+/**
+ * Перезапуск игры
+ */
+function restartGame() {
+    elements.endingScreen.classList.add('hidden');
+    startGame();
+}
+
+/**
+ * Возврат в меню
+ */
+function backToMenu() {
+    elements.endingScreen.classList.add('hidden');
+    stopAudio();
+    elements.mainMenu.classList.remove('hidden');
+    elements.controlPanel.classList.remove('visible');
+}
+
+/**
+ * Переключение главного меню
+ */
+function toggleMainMenu() {
+    if (elements.mainMenu.classList.contains('hidden')) {
+        elements.mainMenu.classList.remove('hidden');
+        elements.controlPanel.classList.remove('visible');
+    } else {
+        elements.mainMenu.classList.add('hidden');
+        elements.controlPanel.classList.add('visible');
+    }
+}
+
+/**
+ * Открыть настройки
+ */
+function openSettings() {
+    elements.settingsMenu.classList.remove('hidden');
+}
+
+/**
+ * Закрыть настройки
+ */
+function closeSettings() {
+    elements.settingsMenu.classList.add('hidden');
+}
+
+/**
+ * Переключить режим пропуска
+ */
+function toggleSkipMode() {
+    gameState.skipMode = !gameState.skipMode;
+    const btn = document.getElementById('skip-btn');
+    btn.style.background = gameState.skipMode ? 'rgba(240, 192, 64, 0.5)' : '';
+    showNotification(gameState.skipMode ? 'Режим пропуска включён' : 'Режим пропуска выключен');
+}
+
+/**
+ * Переключение полноэкранного режима
+ */
+function toggleFullscreen() {
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    } else {
+        elements.gameContainer.requestFullscreen();
+    }
+}
+
+/**
+ * Показать уведомление
+ */
+function showNotification(message) {
+    let notification = document.getElementById('notification');
+
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'notification';
+        document.body.appendChild(notification);
+    }
+
+    notification.textContent = message;
+    notification.classList.add('show');
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 2000);
+}
+
+/**
+ * Проверка наличия сохранённой игры
+ */
+function checkSaveData() {
+    const saved = localStorage.getItem('visualNovelSave');
+    const continueBtn = document.getElementById('continue-game-btn');
+
+    if (saved) {
+        continueBtn.disabled = false;
+        continueBtn.style.opacity = '1';
+    } else {
+        continueBtn.disabled = true;
+        continueBtn.style.opacity = '0.5';
+    }
+}
+
+// Запуск инициализации при загрузке страницы
+document.addEventListener('DOMContentLoaded', initGame);
+
+// Глобальные функции для отладки
+window.gameDebug = {
+    getState: () => gameState,
+    getData: () => gameData,
+    jump: (scene, step) => {
+        gameState.currentScene = scene;
+        gameState.currentStep = step;
+        playScene(scene);
+    },
+    setVar: (name, value) => {
+        gameState.variables[name] = value;
+    },
+    clearSave: () => {
+        localStorage.removeItem('visualNovelSave');
+        showNotification('Сохранение очищено');
+    }
+};

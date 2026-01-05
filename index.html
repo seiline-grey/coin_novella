@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Визуальная Новелла</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Слой фона -->
+        <div id="background-layer">
+            <img id="background-image" src="" alt="Фон">
+        </div>
+
+        <!-- Слой персонажей -->
+        <div id="characters-layer">
+            <div id="character-left" class="character-slot"></div>
+            <div id="character-center" class="character-slot"></div>
+            <div id="character-right" class="character-slot"></div>
+        </div>
+
+        <!-- UI слой -->
+        <div id="ui-layer">
+            <!-- Диалоговое окно -->
+            <div id="dialog-box">
+                <div id="speaker-name"></div>
+                <div id="dialog-text"></div>
+                <div id="next-indicator">▼</div>
+            </div>
+
+            <!-- Меню выбора -->
+            <div id="choice-menu" class="hidden">
+                <div id="choice-container"></div>
+            </div>
+
+            <!-- Меню настроек -->
+            <div id="settings-menu" class="hidden">
+                <div class="settings-content">
+                    <h3>Настройки</h3>
+                    <div class="setting-item">
+                        <label>Громкость музыки:</label>
+                        <input type="range" id="music-volume" min="0" max="100" value="50">
+                        <span id="music-volume-value">50%</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Громкость звуков:</label>
+                        <input type="range" id="sfx-volume" min="0" max="100" value="70">
+                        <span id="sfx-volume-value">70%</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Скорость текста:</label>
+                        <input type="range" id="text-speed" min="10" max="100" value="30">
+                        <span id="text-speed-value">30</span>
+                    </div>
+                    <div class="setting-buttons">
+                        <button id="save-game-btn">Сохранить</button>
+                        <button id="load-game-btn">Загрузить</button>
+                        <button id="reset-game-btn">Начать сначала</button>
+                    </div>
+                    <button id="close-settings">Закрыть</button>
+                </div>
+            </div>
+
+            <!-- Главное меню -->
+            <div id="main-menu">
+                <h1>Моя Визуальная Новелла</h1>
+                <p>Интерактивная история</p>
+                <div class="menu-buttons">
+                    <button id="start-game-btn">Начать игру</button>
+                    <button id="continue-game-btn">Продолжить</button>
+                    <button id="settings-btn">Настройки</button>
+                </div>
+            </div>
+
+            <!-- Экран загрузки -->
+            <div id="loading-screen">
+                <div class="loader"></div>
+                <p>Загрузка...</p>
+            </div>
+
+            <!-- Панель управления -->
+            <div id="control-panel">
+                <button id="menu-btn" title="Меню">☰</button>
+                <button id="save-btn" title="Сохранить">💾</button>
+                <button id="load-btn" title="Загрузить">📂</button>
+                <button id="settings-panel-btn" title="Настройки">⚙️</button>
+                <button id="skip-btn" title="Пропуск">⏩</button>
+            </div>
+
+            <!-- Экран концовки -->
+            <div id="ending-screen" class="hidden">
+                <h2 id="ending-title"></h2>
+                <p id="ending-text"></p>
+                <button id="restart-btn">Играть снова</button>
+                <button id="back-to-menu-btn">В меню</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Аудио элементы -->
+    <audio id="bgm-player" loop></audio>
+    <audio id="sfx-player"></audio>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
