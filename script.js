@@ -44,6 +44,9 @@ var assetCache = {
 // Элементы DOM
 var elements = {};
 
+// Данные игры (из data.js)
+var gameData = GAME_DATA;
+
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     initElements();
@@ -71,6 +74,7 @@ function initElements() {
         choiceMenu: document.getElementById('choice-menu'),
         choiceContainer: document.getElementById('choice-container'),
         turnIndicator: document.getElementById('turn-indicator'),
+        controlPanel: document.getElementById('control-panel'),
         currentPlayerSpan: document.getElementById('current-player'),
         generatedCodeTextarea: document.getElementById('generated-code'),
         inputCodeTextarea: document.getElementById('input-code'),
